@@ -282,28 +282,43 @@ class USEdgarClient:
         ]
 
     def search_company(self, name: str) -> list[dict[str, Any]]:
-        """Search for a company by name or ticker."""
-        # Try edgartools find first for smarter search
-        try:
-            self._init_edgartools()
-            import edgar
-            results = edgar.find_company(name)
-            if results and hasattr(results, "__iter__"):
-                found = []
-                for r in results:
-                    found.append({
-                        "ticker": getattr(r, "ticker", getattr(r, "tickers", [""])[0] if hasattr(r, "tickers") else ""),
-                        "name": getattr(r, "name", str(r)),
-                        "cik": str(getattr(r, "cik", "")),
-                        "exchange": "",
-                        "market_id": self.market_id,
-                    })
-                if found:
-                    return found
-        except Exception:
-            pass
+        """Search for a company by name or ticker.
 
-        # Fallback to filtered list
+        Uses a direct HTTP request to the SEC company tickers JSON
+        for reliable, fast search without depending on edgartools
+        (which can hang on network calls in some environments).
+        """
+        # Fast path: direct SEC tickers search (no edgartools dependency)
+        try:
+            import requests
+            resp = requests.get(
+                "https://www.sec.gov/files/company_tickers.json",
+                headers={"User-Agent": self._user_agent},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            query = name.lower()
+            results = []
+            if isinstance(data, dict):
+                for entry in data.values():
+                    ticker = str(entry.get("ticker", "")).upper()
+                    title = str(entry.get("title", ""))
+                    cik = str(entry.get("cik_str", ""))
+                    if query in title.lower() or query in ticker.lower():
+                        results.append({
+                            "ticker": ticker,
+                            "name": title,
+                            "cik": cik,
+                            "exchange": "",
+                            "market_id": self.market_id,
+                        })
+            if results:
+                return results[:50]  # Cap at 50 results
+        except Exception as exc:
+            logger.warning("SEC tickers search failed: %s", exc)
+
+        # Fallback to cached company list
         return self.list_companies(query=name)
 
     # -- Company profile -----------------------------------------------------

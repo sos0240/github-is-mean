@@ -2,14 +2,14 @@
 
 Point-in-Time (PIT) data providers -- region-based selection:
 
-  - ``sec_edgar``        -- US (SEC EDGAR, NYSE/NASDAQ)
-  - ``esef``             -- EU (ESEF/XBRL, pan-European)
-  - ``companies_house``  -- UK (Companies House, LSE)
-  - ``edinet``           -- Japan (EDINET, TSE)
-  - ``dart``             -- South Korea (DART, KOSPI/KOSDAQ)
-  - ``mops``             -- Taiwan (MOPS, TWSE/TPEX)
-  - ``cvm``              -- Brazil (CVM, B3)
-  - ``cmf``              -- Chile (CMF, Santiago)
+  - ``us_edgar``         -- US (SEC EDGAR, NYSE/NASDAQ)
+  - ``eu_esef_wrapper``  -- EU (ESEF/XBRL, pan-European)
+  - ``uk_ch_wrapper``    -- UK (Companies House, LSE)
+  - ``jp_edinet_wrapper``-- Japan (EDINET, TSE)
+  - ``kr_dart_wrapper``  -- South Korea (DART, KOSPI/KOSDAQ)
+  - ``tw_mops_wrapper``  -- Taiwan (MOPS, TWSE/TPEX)
+  - ``br_cvm_wrapper``   -- Brazil (CVM, B3)
+  - ``cl_cmf_wrapper``   -- Chile (CMF, Santiago)
 
 Supplementary data providers (for partial-coverage regions):
   - ``supplement``       -- OpenFIGI, Euronext, JPX, TWSE, B3, Santiago
