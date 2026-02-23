@@ -1,0 +1,314 @@
+# EDINET API Comprehensive Guide for Roo Code
+
+This document compiles all key information on the EDINET (Electronic Disclosure for Investors' NETwork) API, Japan's official system for corporate financial disclosures. It's designed for integration with Roo Code (your AI coding agent) to implement or enhance the `operator1/clients/edinet.py` module in your Operator 1 repo. All details are current as of February 2026, based on official FSA resources and community tools.
+
+EDINET provides free access to filings from ~11,000 Japanese companies (e.g., securities reports, quarterly earnings, large shareholdings, treasury stock). The API is v2-only since March 2024 (v1 deprecated).
+
+## 1. Introduction
+- **Overview**: EDINET is managed by Japan's Financial Services Agency (FSA). It stores mandatory disclosures in XBRL, PDF, CSV, and ZIP formats. The API allows programmatic retrieval of document lists and individual filings, with ~10 years of data retention (older docs deleted daily).
+- **Key Features**:
+  - Document List API: Fetch submissions by date.
+  - Document Acquisition API: Download specific files (XBRL, PDF, CSV).
+  - CSV support (XBRL-converted) for easier parsing.
+  - Flags for availability (xbrlFlag, pdfFlag, csvFlag) and status (legalStatus for viewing periods).
+- **Data Update Timing**: Intraday (every minute after 08:30 JST), full daily refresh after midnight JST.
+- **Limitations**: Japanese-only docs; no strict rate limits but avoid excessive requests (server-side only, TLS 1.2+ required). No CORS for browser use.
+
+## 2. Registration and Authentication
+- **API Key Required**: Mandatory for v2 (Subscription-Key in query param or header). Keys expire after ~2 years of inactivity.
+- **Signup Process**:
+  1. Go to: https://api.edinet-fsa.go.jp/api/auth/index.aspx?mode=1 (allow pop-ups).
+  2. Create account: Provide name, affiliation (e.g., "Independent Developer" or "Equity Research Pipeline"), phone number (international OK, but multi-factor auth via SMS/voice may require Japanese-compatible number), email.
+  3. Verify via email/SMS → Issue API key from dashboard.
+  4. Store in `.env` as `EDINET_API_KEY` (or env var).
+- **Notes**: Account is for API only (no EDINET code needed for filings). Update details via portal if needed. For issues, contact EDINET helpdesk (edinet-support@cec-ltd.co.jp or +81-46-255-2781, weekdays 9-17 JST).
+
+## 3. Base URL and Version
+- **Base URL**: https://api.edinet-fsa.go.jp/api/v2/
+- **Version**: v2 (path includes `/api/v2/...`). Use this for all requests (v1 ended March 29, 2024).
+
+## 4. Endpoints
+Two main endpoints (GET only):
+
+### 4.1 Document List API
+- **Path**: `/documents.json`
+- **Purpose**: Get metadata or full list of submissions for a specific date (last ~10 years).
+- **Required Params**:
+  - `date`: YYYY-MM-DD (filing date).
+  - `Subscription-Key`: Your API key.
+- **Optional Params**:
+  - `type`: 1 (metadata only, default) or 2 (full list + metadata).
+- **Example Request**:
+  ```
+  GET https://api.edinet-fsa.go.jp/api/v2/documents.json?date=2026-02-20&type=2&Subscription-Key=your_key_here
+  ```
+
+### 4.2 Document Acquisition API
+- **Path**: `/documents/{docID}` (docID from list API, e.g., S100XXXX).
+- **Purpose**: Download a specific document in various formats.
+- **Required Params**:
+  - `type`: 1 (XBRL ZIP + audit), 2 (PDF), 3 (Attachments ZIP), 4 (English ZIP), 5 (CSV; only if csvFlag==1 in list).
+  - `Subscription-Key`: Your API key.
+- **Example Request**:
+  ```
+  GET https://api.edinet-fsa.go.jp/api/v2/documents/S100ABCD?type=5&Subscription-Key=your_key_here
+  ```
+- **Response**: Binary (ZIP/PDF/CSV) or JSON error. Check Content-Type.
+
+## 5. Parameters and Responses
+### 5.1 Response Format (Document List, type=2)
+- JSON structure:
+  ```json
+  {
+    "metadata": {
+      "title": "提出書類一覧",
+      "parameter": {"date": "YYYY-MM-DD", "type": "2"},
+      "resultset": {"count": 123},
+      "processDateTime": "YYYY-MM-DDTHH:MM:SS+09:00",
+      "status": "200",
+      "message": "OK"
+    },
+    "results": [
+      {
+        "seqNumber": 1,
+        "docID": "S100XXXX",
+        "edinetCode": "E01234",
+        "secCode": "72030",  // Securities code (5 digits +0)
+        "JCN": "1234567890123",  // Japan Corporate Number
+        "filerName": "トヨタ自動車株式会社",
+        "fundCode": "G03385",  // If fund
+        "ordinanceCode": "010",
+        "formCode": "030000",
+        "docTypeCode": "120",
+        "periodStart": "YYYY-MM-DD",
+        "periodEnd": "YYYY-MM-DD",
+        "submitDateTime": "YYYY-MM-DDTHH:MM:SS+09:00",
+        "docDescription": "有価証券報告書",
+        "xbrlFlag": "1",
+        "pdfFlag": "1",
+        "attachFlag": "0",
+        "csvFlag": "1",
+        "legalStatus": "1",  // 0=expired, 1=viewable, 2=extended
+        "withdrawalStatus": "0"  // 0=none, 1=notice, 2=withdrawn
+        // Additional fields: issuerEdinetCode, etc.
+      }
+    ]
+  }
+  ```
+- **Error Responses**: Status 400/401/404/500 with message.
+
+### 5.2 Handling
+- Use `csvFlag` to check CSV availability before type=5.
+- Filter by `legalStatus` >0 for downloadable docs.
+- Handle withdrawals (`withdrawalStatus` >0) – skip or flag.
+- Parse Japanese text (UTF-8).
+
+## 6. Related Resources and Appendices
+- **Specification Book (v2)**: https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf (Jan 29, 2026; 97+ pages, Japanese only).
+- **Form Code List (Appendix 1)**: https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140327.xlsx (July 6, 2024).
+- **Document List Output Example (Appendix 2)**: https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140328.xlsx (Aug 21, 2023; edge cases like expirations/withdrawals).
+- **EDINET Code Unification List**: https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140190.csv (Aug 20, 2025; maps discontinued to continuing codes).
+- **EDINET Code List** (Companies): Japanese - https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelist/Edinetcode.zip; English - https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelisteng/Edinetcode.zip.
+- **Fund Code List**: Japanese - https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelist/Fundcode.zip; English - https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelisteng/Fundcode.zip.
+- **FAQs/Notes**: https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0090.html (Japanese).
+
+## 7. Python Implementation
+### 7.1 Custom Code (Using Requests)
+```python
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+API_KEY = os.getenv('EDINET_API_KEY')
+BASE_URL = 'https://api.edinet-fsa.go.jp/api/v2/'
+
+def get_document_list(date: str, type: int = 2):
+    params = {'date': date, 'type': type, 'Subscription-Key': API_KEY}
+    response = requests.get(BASE_URL + 'documents.json', params=params)
+    response.raise_for_status()
+    return response.json()
+
+def get_document(doc_id: str, type: int = 5):  # CSV if available
+    params = {'type': type, 'Subscription-Key': API_KEY}
+    response = requests.get(BASE_URL + f'documents/{doc_id}', params=params)
+    response.raise_for_status()
+    return response.content  # Binary for ZIP/PDF/CSV
+
+# Example
+docs = get_document_list('2026-02-20')
+if docs['metadata']['status'] == '200' and docs['results']:
+    first_doc = docs['results'][0]
+    if first_doc['csvFlag'] == '1':
+        csv_data = get_document(first_doc['docID'], 5)
+        # Save or parse csv_data
+```
+
+### 7.2 Using edinet-tools SDK (Recommended for Roo Code)
+- **Install**: `pip install edinet-tools` (v0.3.0, Feb 12, 2026).
+- **Config**: Set `EDINET_API_KEY` in env.
+- **Examples** (from SDK docs):
+  ```python
+  import edinet_tools
+
+  # Company lookup
+  toyota = edinet_tools.entity("7203")  # Ticker or name
+
+  # All filings for date
+  all_filings = edinet_tools.documents("2026-02-20")
+
+  # Company-specific
+  docs = toyota.documents(days=30, doc_type="120")  # Securities Reports
+
+  # Parse XBRL
+  report = docs[0].parse()
+  print(report.net_sales)  # Structured access
+  print(report.to_dict())  # Export as dict
+
+  # LLM summary (optional, needs llm lib)
+  from edinet_tools.analysis import ExecutiveSummaryTool
+  content = docs[0].fetch()  # ZIP bytes
+  # Process and summarize...
+  ```
+- **Features**: Fuzzy search, entity-centric fetches, 30+ parsed report types (e.g., SecuritiesReport with fields like operating_cash_flow), IFRS/GAAP detection, error handling.
+
+## 8. Edge Cases and Best Practices
+- **Code Consolidation**: Use ESE140190.csv to map discontinued EDINET codes to continuing ones before queries.
+- **Viewing Status**: Skip if legalStatus == "0" (expired); handle "2" (extended) as viewable but temporary.
+- **Withdrawals**: Check withdrawalStatus >0 – avoid processing.
+- **Funds**: Use fundCode and Fundcode.zip for investment trusts.
+- **Parsing**: For XBRL, use libraries like arelle or edinet-tools; CSV for simpler data.
+- **Point-in-Time**: Align fetches to filing dates to avoid look-ahead bias.
+- **Errors**: 401 (invalid key), 404 (no doc), 429 (rate limit if abused).
+- **Updates**: Check FSA site monthly for spec changes.
+
+## 9. Updates as of February 2026
+- Spec v2 updated Jan 29, 2026 (minor clarifications, no major changes).
+- Form codes updated July 2024.
+- Code unification Aug 2025.
+- edinet-tools v0.3.0 (Feb 12, 2026): Added treasury stock parser, IFRS fields, debt metrics.
+
+## 10. Additional Resources
+- Main Portal: https://disclosure.edinet-fsa.go.jp/ (Japanese, use translate).
+- Operation Guides: https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WEEK0060.html
+- YouTube Tutorial: https://www.youtube.com/watch?v=2ao-CZS-BtQ (English, setup guide).
+- GitHub SDK: https://github.com/matthelmer/edinet-tools (MIT license).
+
+Here is a **comprehensive, self-contained EDINET API reference document** you can copy-paste or save as a Markdown file (e.g., `EDINET_API_Reference_for_RooCode.md`) and give directly to Roo Code. It compiles all the key information from your uploaded files, the latest official sources (as of February 2026), and practical integration notes tailored to your **Operator 1** repo (`Abdu2424/Op-1`, specifically `operator1/clients/edinet.py`).
+
+```markdown
+# EDINET API Comprehensive Reference (Version 2 – February 2026)
+For integration into Operator 1 equity research pipeline  
+Target: Roo Code AI coding agent – implement / update `edinet.py` client
+
+## 1. Overview
+- **Full Name**: Electronic Disclosure for Investors' NETwork (EDINET)  
+- **Authority**: Financial Services Agency (FSA) of Japan  
+- **Purpose**: Free government API for downloading Japanese company filings (有価証券報告書 / Yuho reports, quarterly reports, investment trust reports, etc.) in XBRL, PDF, CSV, ZIP formats.  
+- **Coverage**: Listed companies on Tokyo Stock Exchange (JPX), investment funds, etc. (~4,000+ filers).  
+- **Data Retention**: ~10 years (older documents deleted daily).  
+- **Update Frequency**: Intraday (every minute after 08:30 JST), full daily refresh after midnight.  
+- **Language**: Japanese primary; some English translations in code lists.  
+- **Free?**: Yes – no subscription fees, but API key required.
+
+## 2. Current Status (February 2026)
+- **API Version**: Version 2 (mandatory since April 2024; v1 ended March 29, 2024).  
+- **Base URL**: `https://api.edinet-fsa.go.jp/api/v2/`  
+- **Authentication**: Mandatory – `Subscription-Key` header or query param (API key).  
+- **Key Requirement**: Register free account → issue key (name, affiliation, phone, email + multi-factor auth via SMS/voice).  
+- **Registration URL**: https://api.edinet-fsa.go.jp/api/auth/index.aspx?mode=1  
+  - Allow pop-ups for `https://api.edinet-fsa.go.jp/` in browser.  
+  - Steps: Create account → verify email/SMS → register contact info → get key displayed once.  
+  - Store securely in `.env` as `EDINET_API_KEY=your_key_here`.  
+- **Official Portal**: https://disclosure.edinet-fsa.go.jp/ (Japanese; use browser translate).  
+- **Developer Materials Page**: https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0110.html
+
+## 3. Core Endpoints
+### 3.1 Document List API (書類一覧 API)
+- **Purpose**: Fetch list of filings by date (metadata or full list).  
+- **Method**: GET  
+- **URL**:  
+  `https://api.edinet-fsa.go.jp/api/v2/documents.json?date=YYYY-MM-DD&type={type}&Subscription-Key={key}`  
+- **Required Params**:
+  - `date`: Filing date (YYYY-MM-DD); last ~10 years only.  
+  - `Subscription-Key`: Your API key.  
+- **Optional/Control Param**:
+  - `type`:  
+    - `1` (default) → metadata only (count, status, process time).  
+    - `2` → full list of submissions + metadata (recommended for pipeline).  
+- **Example** (full list for Feb 20, 2026):  
+  `https://api.edinet-fsa.go.jp/api/v2/documents.json?date=2026-02-20&type=2&Subscription-Key=your_key`  
+- **Response (JSON)**:
+  ```json
+  {
+    "metadata": { "title": "...", "parameter": {...}, "resultset": {"count": N}, "processDateTime": "...", "status": "200", "message": "" },
+    "results": [ { ... one object per filing ... } ]
+  }
+  ```
+  Key fields in each `results` item:
+  - `seqNumber`: Sequence  
+  - `docID`: S100XXXX (use for download)  
+  - `edinetCode`: EXXXXX (filer code)  
+  - `filerName`: Company name (Japanese)  
+  - `submitDateTime`: Submission timestamp  
+  - `docDescription`: Document title  
+  - `csvFlag`: "1" = CSV available  
+  - `pdfFlag`, `xbrlFlag`: Availability  
+  - `legalStatus`: "0"=expired, "1"=viewable, "2"=extended viewing  
+  - `withdrawalStatus`: "0"=none, "1"=notice, "2"=withdrawn
+
+### 3.2 Document Acquisition API (書類取得 API)
+- **Purpose**: Download specific filing.  
+- **Method**: GET  
+- **URL**:  
+  `https://api.edinet-fsa.go.jp/api/v2/documents/{docID}?type={type}&Subscription-Key={key}`  
+- **Required Params**:
+  - `{docID}`: From list API (e.g., `S100ABCD`).  
+  - `type`: File format  
+    - `1`: XBRL main + audit (ZIP)  
+    - `2`: PDF  
+    - `3`: Attachments (ZIP)  
+    - `4`: English version (ZIP, if exists)  
+    - `5`: CSV (converted from XBRL; check `csvFlag=="1"` first)  
+- **Example** (CSV for a doc):  
+  `https://api.edinet-fsa.go.jp/api/v2/documents/S1000001?type=5&Subscription-Key=your_key`  
+- **Response**: Binary (ZIP/PDF/CSV) – save to cache; check `Content-Type`.
+
+## 4. Supporting Files (Appendices – Critical for Parsing & Mapping)
+Download from: https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0110.html
+
+| File Code       | Name / Purpose                                      | Format   | Download Link (fixed)                                                                 | Last Known Update     | Usage in Pipeline |
+|-----------------|-----------------------------------------------------|----------|---------------------------------------------------------------------------------------|-----------------------|-------------------|
+| ESE140206.pdf   | Main API Specification Book (Version 2)             | PDF      | https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf | 2026-01-29            | Full reference    |
+| ESE140327.xlsx  | Appendix 1: Form Code List (様式コードリスト)      | XLSX     | https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140327.xlsx | 2024-07-06            | Map form codes    |
+| ESE140328.xlsx  | Appendix 2: Document List Output Examples           | XLSX     | https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140328.xlsx | 2023-08-21            | Test edge cases   |
+| ESE140190.csv   | EDINET Code Unification/Consolidation List          | CSV      | https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140190.csv | 2025-08-20            | Map old → new codes |
+| Fundcode.zip    | Fund Code List (ファンドコードリスト)               | ZIP+CSV  | https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelisteng/Fundcode.zip       | Periodic              | Map fund codes    |
+
+- **Code Consolidation (ESE140190.csv)**: Replace discontinued EDINET codes with continuing ones before queries.  
+- **Examples (ESE140328.xlsx)**: Use sheets for testing withdrawals, expired viewing, etc.
+
+## 5. Best Practices for Operator 1 Integration
+- Store `EDINET_API_KEY` in `.env`.  
+- Cache daily lists + documents locally (in `cache/`).  
+- Filter: Only process `legalStatus == "1"` or `"2"`, skip `"0"`.  
+- Handle withdrawals (`withdrawalStatus != "0"`).  
+- Prefer `type=5` (CSV) for easier parsing → normalize via `canonical_translator.py`.  
+- Rate limiting: No hard limit documented → implement exponential backoff.  
+- Error handling: 403/429 → bad key or overuse; 404 → invalid docID.  
+- Libraries: Use `requests` + `pandas`/`openpyxl` for CSV/XLSX; consider `edinet-tools` on PyPI if allowed.  
+- Point-in-time: Use `submitDateTime` for alignment with macro/filings.
+
+## 6. Quick Start Prompt for Roo Code
+"Update `operator1/clients/edinet.py` to use EDINET API v2:  
+- Base URL: https://api.edinet-fsa.go.jp/api/v2/  
+- Require EDINET_API_KEY from .env  
+- Implement fetch_document_list(date: str) → return parsed JSON results  
+- Implement download_document(doc_id: str, type: int = 5) → save CSV/ZIP to cache  
+- Handle code consolidations from ESE140190.csv (load map on init)  
+- Filter viewable docs only (legalStatus in ['1','2'])  
+- Add logging & retry logic  
+Use this full reference document."
+
+
+

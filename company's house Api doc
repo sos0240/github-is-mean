@@ -1,0 +1,1161 @@
+Companies House API overview
+Companies House is an executive agency of the Department for Business and Trade. Our main functions are: to incorporate and dissolve limited companies; examine and store company information delivered under the Companies Act and related legislation; and make this information available to the public.
+
+The Companies House API lets you retrieve information about limited companies (and other companies that fall within the Companies Act 2006). The data returned is live and real-time, and is simple to use and understand.
+
+Before you start
+If you are new to the Companies House API, take a look at the get started guide, which has resources and information to help you.
+
+In the Developer Forum, you can also discuss the API, find help and provide feedback.
+Get started
+Register a Companies House user account
+You must register a user account with Companies House to explore and perform tests with the Companies House API.
+
+To get started quickly, each Companies House API reference page contains an embedded explorer to try out the service without having to write any client code.
+
+About the Companies House API
+Companies House digitally records almost all the information it receives and makes this available to the public through its website and through the Companies House RESTful API.
+
+Being RESTful, each record of information is assigned a globally unique URI, and the operations available on each resource are directly mapped to HTTP verbs. Data can be easily consumed by issuing simple GET requests on the required resource URI.
+
+Read the Companies House REST API overview for more information about our API approach, REST web services and the JSON data format.
+
+API authentication
+Access to API services requires authentication. The Companies House API requires API authentication credentials to be sent with each request, which is sent as an API key, stream key or OAuth access token.
+
+Learn how to create an application as well as API keys, stream keys and OAuth web clients.
+
+Developer guidelines
+Read the developer guidelines for information about security, API rate limits and enumerated types as you’re developing your application.
+Companies House REST API
+The Companies House API is a REST API that provides a simple, consistent approach to requesting and modifying data. REST stands for Representational State Transfer which is an architectural software style in which standard HTTP request methods are used to retrieve and modify representations of data. This is identical to the process of retrieving a web page or submitting a web form.
+
+Previous versions of the Companies House API implemented an XML-RPC style of interface. Data was retrieved or submitted by POSTing XML documents to the service. Each version defined the method to be called and the data to be processed.
+
+The difference between both API approaches is explained below.
+
+Representational State Transfer (REST) web services
+In a RESTful style of API, data resources are allocated unique URLs and manipulated through standard HTTP verbs such as:
+
+GET to request a resource
+POST to create a resource
+PUT to change a resource
+DELETE to remove a resource
+In contrast to the above XML-RPC examples, the same RESTful API request for a customer record would be:
+
+GET https://api.example.domain/customer/12345 HTTP/1.1
+The resource request is made using the GET method with no request body.
+
+In a RESTful API, a resource is modified by POSTing a revised resource representation, in this case JSON, to the same resource URL:
+
+POST https://api.example.domain/customer/12345 HTTP/1.1
+Content-Type: text/json
+{
+    "CustomerName": "Joe Bloggs",
+    "Address"      : "",
+    "etc"           : "etc"
+}
+Similarly, a resource may be deleted by sending a DELETE request to the resource URL:
+
+DELETE https://api.example.domain/customer/12345 HTTP/1.1
+REST uses the existing features of the HTTP protocol and does not permit the designer to define application specific operations. Also, because each resource has a globally unique URI and is able to make use of the GET method for resource requests, these APIs benefit from existing network components such as caches, proxies and intelligent routing.
+
+The JSON data format
+JSON, or JavaScript Object Notation, is an open, standard format for storing and exchanging data. It is easier to use than XML and more compact. It can be used as a data format by any programming language, which makes it ideal for HTTP-based API services.
+
+API specifications
+The API specifications list in the Developer's API suite documents all of the available Companies House public API operations, from reading public company data to submitting a data change for a specific company.
+
+API specifications for all Companies House public API operations are documented using OpenAPI specifications.
+How to create an application
+Creating an application
+Sign in to create an application.
+Provide a name and description for the application.
+Choose whether you want a test application for use against our sandbox environment or a live application for use in production.
+Provide optional links to the privacy policy URL and terms and conditions URL of your service.
+Select 'Create'.
+A new application will be created. You can then create API clients for your application.
+API clients created for to your application can then be used to interact with the Companies House API and OAuth 2.0 service. There are 3 types of API client: API key, stream key and OAuth web client.
+
+Creating an API client
+Sign in to see the application overview.
+Select the application you’d like to create a key for, or select 'Create an application' to create a new one.
+Select 'Create new key'.
+Provide a name for the key and choose the client type.
+Select 'Create'.
+Unique API client credentials will be generated.
+API or stream keys can be sent with most GET requests for a public resource served by the Companies House API. OAuth web client ID and secret combinations can be used to interact with the Companies House OAuth 2.0 service.
+
+API authentication details how to use each type of API client with the Companies House API and OAuth 2.0 services.
+API authentication
+API and stream key authentication
+The Companies House API requires authentication credentials to be sent with each request. In most cases this can be sent as an API or stream key for streaming API connections.
+
+Sending the key
+The Companies House API uses HTTP basic access authentication to send an API key or stream key between the client application and the server.
+
+Basic authentication usually consists of a username and password. The Companies House API takes the username as the API or stream key and ignores the password, so it can be left blank.
+
+Example of HTTP basic authentication
+For an API key of my_api_key, the following curl request demonstrates the setting of the Authorization HTTP request header, as defined by RFC2617:
+
+curl -XGET -u my_api_key: https://api.company-information.service.gov.uk/company/00000006
+GET /company/00000006 HTTP/1.1
+Host: api.company-information.service.gov.uk
+Authorization: Basic bXlfYXBpX2tleTo=
+  
+OAuth 2.0 authentication
+Interaction with some Companies House API functionality requires OAuth 2.0 authorisation. In web server apps, interaction with the Companies House API requires end-user involvement for authentication to prove their identity before the API will allow access. The Companies House API uses HTTP bearer access authentication to send an access token between the client application and the server.
+
+Overview
+In a web server process flow, there must be end user involvement. The process flow is as follows:
+
+Developer setup
+The developer registers an application.
+The developer then creates a web client for their application obtaining a client_id and a client_secret which must be stored securely by the developer.
+The web server application must be configured to use this client_id and client_secret combination for interactions with the Companies House OAuth 2.0 service.
+Initiating the OAuth web server flow
+When the web server wants to sign an end user in with their Companies House account, it redirects the user's browser to the /oauth2/authorise endpoint with the developer's client_id and other details including the requested scopes and a registered redirect_uri.
+The end user signs in to their Companies House account and provides a Company authentication code if any requested scopes contain a specific company number.
+The end user will be prompted to grant access for the application to perform certain actions on their behalf.
+When the end user grants this permission, they will be redirected to the redirect_uri provided with a code parameter to be used in the next stage.
+Handling the redirect back
+The web server can then use the code to exchange for the users access_token and refresh_token by making a POST request to the /oauth/token endpoint.
+This request is not done via a browser but directly from the web server to the Companies House OAuth 2.0 service.
+This request body includes the code, the developer's client_id, client_secret and some other relevant information. The grant_type must be set to authorization_code to exchange an authorization code for an access token.
+The Companies House OAuth 2.0 service verifies this request, and if access is permitted, responds with access and refresh tokens.
+The application uses this access token when making requests to the Companies House API.
+Verifying the access token
+The web server can verify the access token before using it against other Companies House APIs.
+To verify the access token, the web server should make another request directly (not in the user's browser) to the /oauth/verify endpoint.
+Refreshing an access token
+When the access token expires, the application can use the /oauth/token endpoint again to exchange the refresh token for a new access token. The grant_type must be set to refresh_token to exchange a refresh token for an access token.
+Example of HTTP bearer authentication
+For an access token of my_access_token, the following curl request demonstrates the setting of the Authorization HTTP request header, as defined by RFC2617:
+
+curl -XGET -H "Authorization: Bearer my_access_token" https://api.company-information.service.gov.uk/company/00000006
+GET /company/00000006 HTTP/1.1
+Host: api.company-information.service.gov.uk
+Authorization: Bearer my_access_token
+  
+OAuth 2.0 service specifications
+Each Companies House OAuth 2.0 service endpoint is documented with examples within the API specifications list in the Developer's API suite.
+
+Companies House has also written an example third party test harness application that shows how a web server application can interact with the Companies House OAuth 2.0 service. The README of this GitHub repository details how to configure and run the test harness.
+Developer guidelines
+API rate limits
+Rate limiting is applied to the Companies House API to ensure a high quality service is delivered for all users, and to protect client applications from unexpected loops.
+
+You can make up to 600 requests within a 5 minute period. If you exceed this limit, you will receive a 429 Too Many Requests HTTP status code for each request made within the rest of the 5 minute time frame. At the end of the period, your rate limit will reset back to 600 requests.
+
+If you have an application that requires a higher rate limit than this default, contact us.
+
+We reserve the right to ban without notice applications that regularly exceed or attempt to bypass the rate limits.
+
+Enumerated types
+A majority of the resources returned by the Companies House API contain members that reference enumeration types. This helps the resources to be self-documenting, and allows clients to interpret the meaning of a resource member without needing to parse a text description.
+
+Enumeration types are used to supplement or replace a text description. This allows clients to display their own version of a description or provide descriptions in multiple languages.
+
+The collection of enumeration types used by Companies House are available on GitHub. These files provide mapping between enumeration type and text description, and are divided into sets or classes. Each API resource member will define which class of enumeration is being returned.
+
+A planned enhancement to the enumeration scheme is the provision of API endpoints that will return the enumeration class catalogue. This avoids enumerations having to be hard-coded within a client, and by periodically checking for change through ETags, clients do not have to download the full catalogue.
+
+Data resources
+Data is mostly returned as JSON documents. Your application must be able to handle the order of document members changing over time and expect to receive members it has not seen before.
+
+Application security
+The API can only be accessed over Transport Layer Security (TLS). We recommend using TLS 1.2.
+
+API key security
+It is important to keep your API keys secure. This will prevent them from being discovered, your account from being compromised and your rate-limit quota from being exceeded.
+
+Do not embed API keys in your code
+Storing keys in your application code increases the risk that they will be discovered, particularly if any of your source code is made public or it can be viewed by people who should not have access to the key. Instead, you should consider storing them inside environment variables or configuration.
+
+Do not store API keys in your source tree
+If you store API keys in files, for example, configuration or environment files, do not store them inside the application source tree. If all or part of the source is made public, the key may be compromised.
+
+Restrict API key use by IP address and domain
+Limit the use of a key to a specific IP address or domain to reduce its usefulness if it becomes compromised.
+
+Regenerate your API keys
+Regenerate your API keys regularly, including with each application release, to reduce the chance that a key will be discovered.
+
+Delete API keys when no longer required
+Remove unused keys from your registered applications page to limit the number of entry points into your account.
+API testing
+Environments
+Companies House APIs are hosted in our live environment where actual company data is made available and real users can file for their companies. A sandbox environment has also been created, running the same API versions as live to allow software developers to test their integration with Companies House APIs in a safe place.
+
+Live
+The live environment runs every API listed in the Developer's API suite apart from the sandbox test data generator api service which only runs in the sandbox environment.
+
+Sandbox
+The sandbox environment runs most APIs listed in the Developer's API suite including the test data generator service. Some APIs such as streaming and document APIs do not run in the sandbox while others like the search API respond with data from live due to processing limitations detailed below. The sandbox environment does not run the Companies House website for browser-based access to sandbox data.
+
+The sandbox environment is maintained for developers to test their software's integration with OAuth and filing APIs which should not be tested in live due to the requirement for company authentication codes and the fact that successful API filing tests would update actual company data on the public register.
+
+Data in the sandbox cannot be maintained or updated like live data due to manual processing steps required in certain cases when processing filings. This internal processing has been substituted for a mock processing service in the sandbox. Mock internal processing simply responds to filing API submissions with a status update sent back to the transaction data, it does not update the test company data itself. More details around this process are documented below.
+
+Sandbox environment URLs
+When testing in the sandbox, your application must substitute the live environment URLs for the sandbox URLs:
+
+API URL: https://api-sandbox.company-information.service.gov.uk
+Identity service URL: https://identity-sandbox.company-information.service.gov.uk
+Test data generator URL: https://test-data-sandbox.company-information.service.gov.uk (sandbox only)
+API keys and OAuth client details must also be substituted for test versions when using the sandbox.
+
+Testing public data APIs
+Public data APIs such as company data output, search and the streaming API only allow the reading of existing data. These APIs only support GET requests using basic API or stream key authorization. Due to the read only nature of these APIs, testing can be done against the live or sandbox environments.
+
+Testing filing APIs
+Filing APIs such as the transactions and registered office address (ROA) data change APIs allow data to be created or changed as well as read. These APIs support a combination of http request methods like POST, PUT and PATCH and require bearer OAuth access token authorization. Due to the nature of these APIs, testing should only be done against the sandbox environment.
+
+How developers can test filing APIs in the sandbox
+Create a test company using the test data generator API.
+Store or take note of the company number and authentication code in the response.
+Read the company profile data from the sandbox API.
+Integrate with the OAuth service to get an access token ready for filing APIs. This will require a sandbox user to be registered and the test company authentication code to be provided.
+Create a filing using the access token as authorisation against the transaction's API and other filing APIs.
+Submit the transaction.
+Periodically check the transaction for mock status updates and handle accepted and rejected responses accordingly.
+Once a test company has been created using the test data generator, it can either be deleted by calling a different endpoint in the test data generator service or it can be reused for further testing. If you plan to reuse the company, you must make sure to store the authentication code as this cannot be recovered or reset later.
+
+Once a user account has been registered in the sandbox, this can also be reused for further testing.
+Developer's API suite
+API Products
+Companies House offers several API products to enable you to get the best out of the company information held at Companies House.
+
+Companies House identity service
+Companies House identity and authentication service.
+
+Companies House Public Data API
+An API suite providing read only access to search and retrieve public company data
+
+Discrepancies
+For use only by Obliged Entities to report PSC Discrepancies
+
+Document API
+API suite providing company filing history document metadata and downloads.
+
+Manipulate Company Data (API Filing)
+An API suite that allows clients to manipulate company information, if they have authority to do so.
+
+Sandbox Test Data Generator API
+Sandbox API suite to generate test data on demand
+
+Streaming API
+A streaming API giving access to real time data changes.
+
+Companies House identity service reference
+Authentication
+Operation	HTTP Request	Description
+Authorise web user	
+GET /oauth2/authorise
+Request user authorisation code
+Obtain access token	
+POST /oauth2/token
+Obtain an access token
+Verify token	
+GET /oauth2/verify
+Verify an access token
+User details
+Operation	HTTP Request	Description
+get	
+GET /user/profile
+Request user information
+Companies House Public Data API reference
+Registered office address
+Operation	HTTP Request	Description
+get	
+GET /company/{companyNumber}/registered-office-address
+Registered Office Address
+Company profile
+Operation	HTTP Request	Description
+get	
+GET /company/{companyNumber}
+Company profile
+Search
+Operation	HTTP Request	Description
+advanced company search	
+GET /advanced-search/companies
+Advanced search for a company
+search all	
+GET /search
+Search All
+search companies	
+GET /search/companies
+Search companies
+search officers	
+GET /search/officers
+Search company officers
+search disqualified officers	
+GET /search/disqualified-officers
+Search disqualified officers
+search companies alphabetically	
+GET /alphabetical-search/companies
+Search for a company
+search dissolved companies	
+GET /dissolved-search/companies
+Search for a dissolved company
+Officers
+Operation	HTTP Request	Description
+list	
+GET /company/{company_number}/officers
+Company Officers
+get	
+GET /company/{company_number}/appointments/{appointment_id}
+Get a company officer appointment
+Registers
+Operation	HTTP Request	Description
+get	
+GET /company/{company_number}/registers
+Company registers
+Charges
+Operation	HTTP Request	Description
+get	
+GET /company/{company_number}/charges/{charge_id}
+list	
+GET /company/{company_number}/charges
+Charges
+Filing history
+Operation	HTTP Request	Description
+get	
+GET /company/{company_number}/filing-history/{transaction_id}
+filingHistoryItem resource
+list	
+GET /company/{company_number}/filing-history
+filingHistoryList resource
+Insolvency
+Operation	HTTP Request	Description
+get	
+GET /company/{company_number}/insolvency
+Exemptions
+Operation	HTTP Request	Description
+get	
+GET /company/{company_number}/exemptions
+Officer disqualifications
+Operation	HTTP Request	Description
+get corporate officer	
+GET /disqualified-officers/corporate/{officer_id}
+Get a corporate officers disqualifications
+get natural officer	
+GET /disqualified-officers/natural/{officer_id}
+Get natural officers disqualifications
+Officer appointments
+Operation	HTTP Request	Description
+list	
+GET /officers/{officer_id}/appointments
+Officer Appointment List
+UK Establishments
+Operation	HTTP Request	Description
+get	
+GET /company/{company_number}/uk-establishments
+Company UK Establishments
+Persons with significant control
+Operation	HTTP Request	Description
+get corporate entity beneficial owner	
+GET /company/{company_number}/persons-with-significant-control/corporate-entity-beneficial-owner/{psc_id}
+Get the corporate entity beneficial owner
+get corporate entities	
+GET /company/{company_number}/persons-with-significant-control/corporate-entity/{psc_id}
+Get the corporate entity with significant control
+get individual beneficial owner	
+GET /company/{company_number}/persons-with-significant-control/individual-beneficial-owner/{psc_id}
+Get the individual beneficial owner
+get individual	
+GET /company/{company_number}/persons-with-significant-control/individual/{psc_id}
+Get the individual person with significant control
+get legal person beneficial owner	
+GET /company/{company_number}/persons-with-significant-control/legal-person-beneficial-owner/{psc_id}
+Get the legal person beneficial owner
+get legal persons	
+GET /company/{company_number}/persons-with-significant-control/legal-person/{psc_id}
+Get the legal person with significant control
+get statement	
+GET /company/{company_number}/persons-with-significant-control-statements/{statement_id}
+Get the person with significant control statement
+get super secure beneficial owner	
+GET /company/{company_number}/persons-with-significant-control/super-secure-beneficial-owner/{super_secure_id}
+Get the super secure beneficial owner
+get super secure person	
+GET /company/{company_number}/persons-with-significant-control/super-secure/{super_secure_id}
+Get the super secure person with significant control
+list	
+GET /company/{company_number}/persons-with-significant-control
+List the company persons with significant control
+list statements	
+GET /company/{company_number}/persons-with-significant-control-statements
+Discrepancies reference
+Persons with significant control
+Operation	HTTP Request	Description
+create discrepancies	
+POST /psc-discrepancy-reports/{discrepancy-report-id}/discrepancies
+Create PSC discrepancies
+create report	
+POST /psc-discrepancy-reports
+Create a PSC discrepancy report
+update report	
+PUT /psc-discrepancy-reports/{discrepancy-report-id}
+Update a PSC Discrepancy Report
+Document API reference
+Document Metadata
+Operation	HTTP Request	Description
+get	
+GET /document/{document_id}
+Fetch a document's metadata
+Document Location
+Operation	HTTP Request	Description
+get	
+GET /document/{document_id}/content
+Fetch a document
+Manipulate Company Data (API Filing) reference
+Transactions
+Operation	HTTP Request	Description
+create	
+POST /transactions
+Create a transaction
+delete	
+DELETE /transactions/{transaction_id}
+Delete a transaction
+get	
+GET /transactions/{transaction_id}
+Get a transaction
+update	
+PUT /transactions/{transaction_id}
+Update a transaction
+Registered office address
+Operation	HTTP Request	Description
+create	
+POST /transactions/{transaction_id}/registered-office-address
+Create a registered office address resource
+get	
+GET /transactions/{transaction_id}/registered-office-address
+Get a registered office address resource
+put	
+PUT /transactions/{transaction_id}/registered-office-address
+Replace a registered office address resource
+validate	
+GET /transactions/{transaction_id}/registered-office-address/validation-status
+Get validation status for a registered office address resource
+Registered email address
+Operation	HTTP Request	Description
+create	
+POST /transactions/{transaction_id}/registered-email-address
+Create a registered email address filing resource
+eligibility	
+GET /registered-email-address/company/{company_number}/eligibility
+Get eligibilty of a company for registered email address
+get	
+GET /transactions/{transaction_id}/registered-email-address
+Get registered email address filing resource
+put	
+PUT /transactions/{transaction_id}/registered-email-address
+Replace a registered email address filing resource
+validate	
+GET /transactions/{transaction_id}/registered-email-address/validation-status
+Get validation status for a registered email address filing resource
+Insolvency
+Operation	HTTP Request	Description
+create appointment	
+POST /transactions/{transaction_id}/insolvency/practitioners/{practitioner_id}/appointment
+Appoint the practitioner
+create attachment	
+POST /transactions/{transaction_id}/insolvency/attachments
+Send a file attachment for the case
+create insolvency resource	
+POST /transactions/{transaction_id}/insolvency
+Create an insolvency transaction resource
+create practitioner	
+POST /transactions/{transaction_id}/insolvency/practitioners
+Create a practitioner for this insolvency resource
+create progress report	
+POST /transactions/{transaction_id}/insolvency/progress-report
+Send progress report details for this transaction
+create resolution	
+POST /transactions/{transaction_id}/insolvency/resolution
+Send resolution details for this transaction
+create statement of affairs	
+POST /transactions/{transaction_id}/insolvency/statement-of-affairs
+Send statement of affairs details for this transaction
+delete appointment	
+DELETE /transactions/{transaction_id}/insolvency/practitioners/{practitioner_id}/appointment
+Delete the appointment resource
+delete attachment	
+DELETE /transactions/{transaction_id}/insolvency/attachments/{attachment_id}
+Delete an attachment from this transaction
+delete practitioner	
+DELETE /transactions/{transaction_id}/insolvency/practitioners/{practitioner_id}
+Delete the practitioner from this insolvency resource
+delete progress report	
+DELETE /transactions/{transaction_id}/insolvency/progress-report
+Delete the progress report
+delete resolution	
+DELETE /transactions/{transaction_id}/insolvency/resolution
+Delete the resolution date
+delete statement of affairs	
+DELETE /transactions/{transaction_id}/insolvency/statement-of-affairs
+Delete the statement of affairs
+download attachment	
+GET /transactions/{transaction_id}/insolvency/attachments/{attachment_id}/download
+Download the attachment
+get all practitioners	
+GET /transactions/{transaction_id}/insolvency/practitioners
+Get all practitioners
+get appointment	
+GET /transactions/{transaction_id}/insolvency/practitioners/{practitioner_id}/appointment
+Get the appointment details
+get attachment	
+GET /transactions/{transaction_id}/insolvency/attachments/{attachment_id}
+Get information about the attachment that was submitted
+get practitioner	
+GET /transactions/{transaction_id}/insolvency/practitioners/{practitioner_id}
+Get the practitioner resource
+get progress report	
+GET /transactions/{transaction_id}/insolvency/progress-report
+Get Progress Report
+get resolution details	
+GET /transactions/{transaction_id}/insolvency/resolution
+Get the resolution details
+get statement of affairs	
+GET /transactions/{transaction_id}/insolvency/statement-of-affairs
+Get Statement of Affairs
+validate insolvency resource	
+GET /transactions/{transaction_id}/insolvency/validation-status
+Sandbox Test Data Generator API reference
+Company Test Data
+Operation	HTTP Request	Description
+create	
+POST /test-data/company
+Create a test company
+delete	
+DELETE /test-data/company/{companyNumber}
+Delete a test company
+Streaming API reference
+Company information
+Operation	HTTP Request	Description
+stream	
+GET /companies
+Basic company information stream
+Filing history
+Operation	HTTP Request	Description
+stream	
+GET /filings
+Company filing history stream
+Insolvency cases
+Operation	HTTP Request	Description
+stream	
+GET /insolvency-cases
+Insolvency cases stream
+Charges
+Operation	HTTP Request	Description
+stream	
+GET /charges
+Charges stream
+Officers
+Operation	HTTP Request	Description
+stream	
+GET /officers
+Officers stream
+Persons with significant control
+Operation	HTTP Request	Description
+stream	
+GET /persons-with-significant-control
+PSC stream
+Disqualified officers
+Operation	HTTP Request	Description
+stream	
+GET /disqualified-officers
+Disqualified officers stream
+Company exemptions
+Operation	HTTP Request	Description
+stream	
+GET /company-exemptions
+Company exemptions stream
+Persons with significant control statements
+Operation	HTTP Request	Description
+stream	
+GET /persons-with-significant-control-statements
+PSC statements stream
+Getting started with the streaming API
+The Companies House streaming API gives you access to realtime data changes of the information held at Companies House. This delivers the same information that is available through the on-demand REST API GET requests, but instead pushes data to your client as it changes, through a long-running connection that you first establish.
+
+How it works
+The streaming endpoints return exactly the same data resources as the equivalent on-demand data API, wrapped in a small JSON envelope that provides additional metadata, such as what type of resource is being sent, and the date-time it was published.
+
+The stream envelope contains the following information:
+
+{
+    "event": {
+        "fields_changed": [
+            "string"
+        ],
+        "published_at": "date-time",
+        "timepoint": "integer",
+        "type": "string"
+    },
+    "resource_id": "string",
+    "resource_kind": "string",
+    "resource_uri": "string",
+    "data": { }
+}
+This structure is standard across all the stream API endpoints. It is the data sub-document that contains the data resource being streamed.
+
+Data snapshots
+As the stream delivers realtime information, you cannot use it to obtain a complete copy of the data held at Companies House. You can, however, use it to keep a dataset current.
+
+For this purpose, Companies House produces snapshot datasets that you can import into a database, and subsequenlty keep current with the streaming API.
+
+The snapshots contain the stream timepoint at which they were taken. By connecting to the streaming endpoint with this timepoint, you will pick up the stream where the snapshot left off. See Timepoints for further information.
+
+Connecting to a streaming endpoint
+Establishing a connection to the streaming APIs involves making a long-running HTTP request, and incrementally processing each response line. Conceptually, you can think of this as downloading an infinitely long file over HTTP.
+
+Authentication
+Access to Companies House streaming API services requires authentication. The Authentication page describes the authentication mechanism used by the streaming API, how to register your application and obtain an API key.
+
+Connecting
+Create an HTTP connection using a recent HTTP client library, and consume the streaming data for as long as possible. Repeatedly connecting and disconnecting is a resource expensive operation, and you may be rate-limited if you frequently reconnect.
+
+Our servers will maintain the connection indefinitely, only dropping it in the event of high network congestion, routine maintenance, server errors or too many connections from an application.
+
+Be aware of buffering proxies between your client and our servers, and of HTTP client libraries that internally buffer and only return the response data when the connection is closed. The streaming API will not work if buffering is occuring within the connection route. Most recent HTTP clients will return data incrementally.
+
+Connection limits
+A maximum of two concurrent connections per-account can be made to the streaming API. Each additional connection attempt above this limit will cause the oldest open connection to close.
+
+Be aware that repeatedly opening connections to the streaming API will result in the client being rate limited.
+
+Disconnecting
+The streaming API connection will be disconneced under the following circumstances:
+
+A client establishes too many connections with the same credentials. When this occurs, the oldest connection will be terminated. This means you have to be careful not to run too many reconnecting clients in parallel with the same credentials, or else they will take turns disconnecting each other.
+
+A client reads data too slowly. Every streaming connection is backed by a queue of messages to be sent to the client. If this queue grows too large over time, the connection will be closed.
+
+Our streaming servers are restarted. This happens infrequently, and is usually due to code deployment or a rebalancing of our server workload.
+
+Our network configuration changes. This is rare, and occurs when a network reconfiguration takes place or a load balancer restarts.
+
+Keeping a connection alive
+HTTP connections will typically be timed out and disconnected by clients if there is no data transfer for a while. To avoid this and keep a connection alive when there is no new data to stream, the streaming API periodically sends an empty record as a heartbeat. These take the form of a blank line within the streamed feed, and must be ignored by client applications.
+
+Reconnecting
+Repeatedly reconnecting to the streaming API is a resource expensive operation, and you may be rate-limited if you do this frequently.
+
+If you are disconnected, try and reconnect and if that fails, implement a back off strategy based on the failure reason:
+
+If you receive an HTTP status code 429, then you are being subjected to rate-limiting and you must wait one minute before attempting a reconnect. If you do not do this, you will receive a further 429 responses and the rate-limit period will increase.
+
+Reconnects failing with a retryable HTTP error should be retried after 10 seconds.
+
+If you receive a network error, implement a back off for a few seconds to allow the network error to pass, as they are frequently transient.
+
+Timepoints
+The streaming API endpoints are each backed by a queue, so that clients can disconnect periodically and reconnect some time later. This queue backlog contains as many events as needed to bring the most recently produced data snapshot up to date.
+
+By default a stream will deliver data events as they happen after a connection is established. Clients can request that the stream starts to deliver data events from a point further back in the queue by specifying a timepoint on connection.
+
+Every event received from the stream is accompanied by a corresponding timepoint. When clients reconnect to the stream, they should supply the timepoint of the last sucessfully processed event to ensure continuity of data. If the timepoint is too far in the past, clients will receive a 416 error. Clients will also receive this error if they consume events too slowly.
+
+A data snapshot also comes with a timepoint, which gives you the point at which the snapshot was taken.
+
+Rate limiting
+If clients do not implement a connection back-off strategy, repeat connection attempts may result in the client being rate limited for a short period, during which the client will receive a 429 HTTP status code.
+
+Clients must detect a 429 HTTP status code and implement a back-off strategy. If they do not, the client IP address will be blocked by Companies House.
+Company information
+Operation	HTTP Request	Description
+stream	
+GET /companies
+Basic company information stream
+Basic company information stream
+This stream returns basic company information, such as name, address and accounting period dates.
+
+Request
+GET https://stream.companieshouse.gov.uk/companies
+Query parameters
+Parameter name	Value	Description	Additional
+timepoint	integer	
+By default a stream will deliver data events as they happen after a connection is established. Clients can request that the stream delivers data events starting some time in the past, by specifying a timepoint on connection. Valid timepoint values are provided or given by the last stream event received before a client disconnects. In the future data snapshots will be available.
+
+Authorisation
+This request requires the use of one of following authorisation methods: API key .
+
+Response
+The following HTTP status codes may be returned, optionally with a response resource.
+
+Status code	Description	Resource
+200	OK
+Connection established to stream. Responses will be returned one-per-line.
+
+companyProfileStream
+401	Unauthorized
+Client is not authorised to connect to this stream.
+
+416	Requested Range Not Satisfiable
+The specified timepoint is invalid or too old.
+
+429	Too Many Requests
+Client has been rate-limited.
+Filing history
+Operation	HTTP Request	Description
+stream	
+GET /filings
+Company filing history stream
+Company filing history stream
+This stream returns company filing history information, such as form type, description and dates.
+
+Request
+GET https://stream.companieshouse.gov.uk/filings
+Query parameters
+Parameter name	Value	Description	Additional
+timepoint	integer	
+By default a stream will deliver data events as they happen after a connection is established. Clients can request that the stream delivers data events starting some time in the past, by specifying a timepoint on connection. Valid timepoint values are provided or given by the last stream event received before a client disconnects. In the future data snapshots will be available.
+
+Authorisation
+This request requires the use of one of following authorisation methods: API key .
+
+Response
+The following HTTP status codes may be returned, optionally with a response resource.
+
+Status code	Description	Resource
+200	OK
+Connection established to stream. Responses will be returned one-per-line.
+
+filingHistoryStream
+401	Unauthorized
+Client is not authorised to connect to this stream.
+
+416	Requested Range Not Satisfiable
+The specified timepoint is invalid or too old.
+
+429	Too Many Requests
+Client has been rate-limited.
+Insolvency cases
+Operation	HTTP Request	Description
+stream	
+GET /insolvency-cases
+Insolvency cases stream
+Insolvency cases stream
+This stream returns information about company insolvency cases.
+
+Request
+GET https://stream.companieshouse.gov.uk/insolvency-cases
+Query parameters
+Parameter name	Value	Description	Additional
+timepoint	integer	
+By default a stream will deliver data events as they happen after a connection is established. Clients can request that the stream delivers data events starting some time in the past, by specifying a timepoint on connection. Valid timepoint values are provided or given by the last stream event received before a client disconnects. In the future data snapshots will be available.
+
+Authorisation
+This request requires the use of one of following authorisation methods: API key .
+
+Response
+The following HTTP status codes may be returned, optionally with a response resource.
+
+Status code	Description	Resource
+200	OK
+Connection established to stream. Responses will be returned one-per-line.
+
+insolvencyCasesStream
+401	Unauthorized
+Client is not authorised to connect to this stream.
+
+416	Requested Range Not Satisfiable
+The specified timepoint is invalid or too old.
+
+429	Too Many Requests
+Client has been rate-limited.
+Charges
+Operation	HTTP Request	Description
+stream	
+GET /charges
+Charges stream
+Charges stream
+This stream returns information about company charges.
+
+Request
+GET https://stream.companieshouse.gov.uk/charges
+Query parameters
+Parameter name	Value	Description	Additional
+timepoint	integer	
+By default a stream will deliver data events as they happen after a connection is established. Clients can request that the stream delivers data events starting some time in the past, by specifying a timepoint on connection. Valid timepoint values are provided or given by the last stream event received before a client disconnects. In the future data snapshots will be available.
+
+Authorisation
+This request requires the use of one of following authorisation methods: API key .
+
+Response
+The following HTTP status codes may be returned, optionally with a response resource.
+
+Status code	Description	Resource
+200	OK
+Connection established to stream. Responses will be returned one-per-line.
+
+chargesStream
+401	Unauthorized
+Client is not authorised to connect to this stream.
+
+416	Requested Range Not Satisfiable
+The specified timepoint is invalid or too old.
+
+429	Too Many Requests
+Client has been rate-limited.
+Officers
+Operation	HTTP Request	Description
+stream	
+GET /officers
+Officers stream
+Officers stream
+This stream will return information about company officers.
+
+Request
+GET https://stream.companieshouse.gov.uk/officers
+Query parameters
+Parameter name	Value	Description	Additional
+timepoint	integer	
+By default a stream will deliver data events as they happen after a connection is established. Clients can request that the stream delivers data events starting some time in the past, by specifying a timepoint on connection. Valid timepoint values are provided or given by the last stream event received before a client disconnects. In the future data snapshots will be available.
+
+Authorisation
+This request requires the use of one of following authorisation methods: API key .
+
+Response
+The following HTTP status codes may be returned, optionally with a response resource.
+
+Status code	Description	Resource
+200	OK
+Connection established to stream. Responses will be returned one-per-line.
+
+officersStream
+401	Unauthorized
+Client is not authorised to connect to this stream.
+
+416	Requested Range Not Satisfiable
+The specified timepoint is invalid or too old.
+
+429	Too Many Requests
+Client has been rate-limited.
+Persons with significant control
+Operation	HTTP Request	Description
+stream	
+GET /persons-with-significant-control
+PSC stream
+PSC stream
+This stream returns information about persons with significant control.
+
+Request
+GET https://stream.companieshouse.gov.uk/persons-with-significant-control
+Query parameters
+Parameter name	Value	Description	Additional
+timepoint	integer	
+By default a stream will deliver data events as they happen after a connection is established. Clients can request that the stream delivers data events starting some time in the past, by specifying a timepoint on connection. Valid timepoint values are provided or given by the last stream event received before a client disconnects. In the future data snapshots will be available.
+
+Authorisation
+This request requires the use of one of following authorisation methods: API key .
+
+Response
+The following HTTP status codes may be returned, optionally with a response resource.
+
+Status code	Description	Resource
+200	OK
+Connection established to stream. Responses will be returned one-per-line.
+
+pscStream
+401	Unauthorized
+Client is not authorised to connect to this stream.
+
+416	Requested Range Not Satisfiable
+The specified timepoint is invalid or too old.
+
+429	Too Many Requests
+Client has been rate-limited.
+Disqualified officers
+Operation	HTTP Request	Description
+stream	
+GET /disqualified-officers
+Disqualified officers stream
+Disqualified officers stream
+This stream returns information about disqualified officers (natural and corporate).
+
+Request
+GET https://stream.companieshouse.gov.uk/disqualified-officers
+Query parameters
+Parameter name	Value	Description	Additional
+timepoint	integer	
+By default a stream will deliver data events as they happen after a connection is established. Clients can request that the stream delivers data events starting some time in the past, by specifying a timepoint on connection. Valid timepoint values are provided or given by the last stream event received before a client disconnects. In the future data snapshots will be available.
+
+Authorisation
+This request requires the use of one of following authorisation methods: API key .
+
+Response
+The following HTTP status codes may be returned, optionally with a response resource.
+
+Status code	Description	Resource
+200	OK
+Connection established to stream. Responses will be returned one-per-line.
+
+disqualifiedOfficersStream
+401	Unauthorized
+Client is not authorised to connect to this stream.
+
+416	Requested Range Not Satisfiable
+The specified timepoint is invalid or too old.
+
+429	Too Many Requests
+Client has been rate-limited.
+Company exemptions
+Operation	HTTP Request	Description
+stream	
+GET /company-exemptions
+Company exemptions stream
+Company exemptions stream
+The streaming API for company exemptions is currently still in development. It will be available at a later date.
+
+When complete, this stream will return information about company exemptions.
+
+Request
+GET https://stream.companieshouse.gov.uk/company-exemptions
+Query parameters
+Parameter name	Value	Description	Additional
+timepoint	integer	
+By default a stream will deliver data events as they happen after a connection is established. Clients can request that the stream delivers data events starting some time in the past, by specifying a timepoint on connection. Valid timepoint values are provided or given by the last stream event received before a client disconnects. In the future data snapshots will be available.
+
+Authorisation
+This request requires the use of one of following authorisation methods: API key .
+
+Response
+The following HTTP status codes may be returned, optionally with a response resource.
+
+Status code	Description	Resource
+200	OK
+Connection established to stream. Responses will be returned one-per-line.
+
+companyExemptionsStream
+401	Unauthorized
+Client is not authorised to connect to this stream.
+
+416	Requested Range Not Satisfiable
+The specified timepoint is invalid or too old.
+
+429	Too Many Requests
+Client has been rate-limited.
+Persons with significant control statements
+Operation	HTTP Request	Description
+stream	
+GET /persons-with-significant-control-statements
+PSC statements stream
+PSC statements stream
+This stream returns information about persons with significant control statements.
+
+Request
+GET https://stream.companieshouse.gov.uk/persons-with-significant-control-statements
+Query parameters
+Parameter name	Value	Description	Additional
+timepoint	integer	
+By default a stream will deliver data events as they happen after a connection is established. Clients can request that the stream delivers data events starting some time in the past, by specifying a timepoint on connection. Valid timepoint values are provided or given by the last stream event received before a client disconnects. In the future data snapshots will be available.
+
+Authorisation
+This request requires the use of one of following authorisation methods: API key .
+
+Response
+The following HTTP status codes may be returned, optionally with a response resource.
+
+Status code	Description	Resource
+200	OK
+Connection established to stream. Responses will be returned one-per-line.
+
+pscStatementsStream
+401	Unauthorized
+Client is not authorised to connect to this stream.
+
+416	Requested Range Not Satisfiable
+The specified timepoint is invalid or too old.
+
+429	Too Many Requests
+Client has been rate-limited.
+{
+    "swagger": "2.0",
+    "info": {
+        "version": "1.0.0",
+        "title": "Streaming API",
+        "description": "A streaming API giving access to real time data changes."
+    },
+    "host": "stream.companieshouse.gov.uk",
+    "schemes": [
+        "https"
+    ],
+    "consumes": [
+        "application/json"
+    ],
+    "produces": [
+        "application/json"
+    ],
+    "tags": [{
+            "name": "companies",
+            "description": "Company information"
+        },
+        {
+            "name": "filings",
+            "description": "Filing history"
+        },
+        {
+            "name": "insolvency-cases",
+            "description": "Insolvency cases"
+        },
+        {
+            "name": "charges",
+            "description": "Charges"
+        },
+        {
+            "name": "officers",
+            "description": "Officers"
+        },
+        {
+            "name" : "persons-with-significant-control",
+            "description" : "Persons with significant control"
+        },
+        {
+            "name" : "disqualified-officers",
+            "description" : "Disqualified officers"
+        },
+        {
+            "name" : "company-exemptions",
+            "description" : "Company exemptions"
+        },
+        {
+            "name" : "persons-with-significant-control-statements",
+            "description" : "Persons with significant control statements"
+        }
+    ],
+    "securityDefinitions": {
+        "stream_key": {
+            "type": "apiKey",
+            "name": "stream_key",
+            "in": "header"
+        }
+    },
+    "security": [{
+        "stream_key": []
+    }],
+    "paths": {
+        "/companies": {
+            "$ref": "http://127.0.0.1:10000/api.ch.gov.uk-specifications/swagger-2.0/spec/stream.json#/companies"
+        },
+        "/filings": {
+            "$ref": "http://127.0.0.1:10000/api.ch.gov.uk-specifications/swagger-2.0/spec/stream.json#/filings"
+        },
+        "/insolvency-cases": {
+            "$ref": "http://127.0.0.1:10000/api.ch.gov.uk-specifications/swagger-2.0/spec/stream.json#/insolvency-cases"
+        },
+        "/charges": {
+            "$ref": "http://127.0.0.1:10000/api.ch.gov.uk-specifications/swagger-2.0/spec/stream.json#/charges"
+        },
+        "/officers": {
+            "$ref": "http://127.0.0.1:10000/api.ch.gov.uk-specifications/swagger-2.0/spec/stream.json#/officers"
+        },
+        "/persons-with-significant-control": {
+            "$ref": "http://127.0.0.1:10000/api.ch.gov.uk-specifications/swagger-2.0/spec/stream.json#/persons-with-significant-control"
+        },
+        "/disqualified-officers": {
+            "$ref": "http://127.0.0.1:10000/api.ch.gov.uk-specifications/swagger-2.0/spec/stream.json#/disqualified-officers"
+        },
+        "/company-exemptions": {
+            "$ref": "http://127.0.0.1:10000/api.ch.gov.uk-specifications/swagger-2.0/spec/stream.json#/company-exemptions"
+        },
+        "/persons-with-significant-control-statements": {
+            "$ref": "http://127.0.0.1:10000/api.ch.gov.uk-specifications/swagger-2.0/spec/stream.json#/persons-with-significant-control-statements"
+        }
+    }
+}
+Skip to last replySkip to top
+Skip to main content
+
+Companies House Developer Forum
+Versioning the Companies House API
+API Changes
+
+​
+
+Versioning the Companies House API
+API Changes
+Aug 2015
+Nov 2015
+
+post by iankent on Aug 26, 2015
+
+iankent
+Aug 2015
+We’re planning on implementing API versioning in the near future.
+
+The approach we’ve taken is to version our API on a per-resource basis. This allows us flexibility in developing new API features or introducing breaking changes without having to deprecate an entire version of our API, minimising the impact of non-breaking changes.
+
+Initially, existing resources will remain as-is and will be frozen at “version 0”.
+
+Once we’ve enabled API versioning, the latest version of the requested resource will be returned unless an earlier version is explicitly requested using the Accept header.
+
+A preview of our API versioning documentation is available as a GitHub Gist which explains this in more detail.
+
+We’ll provide more information on specific implementation details and resource MIME types as they become available.
+
+gist.github.com
+https://gist.github.com/ian-kent/2df8f36722c3af141e4a
+API versioning.md
+# API versioning
+
+The Companies House API is versioned using MIME types and content negotiation.
+
+You can request a specific version of a resource using the `Accept` request header,
+and the resource version is returned in the `Content-Type` response header.
+
+Each resource is versioned independently - there is no global API version number.
+
+_Notes_:
+This file has been truncated. show original
+
+
+
+21.7k
+views
+
+1
+link
+Pinned globally on Aug 26, 2015
+
+Pinned globally on Aug 26, 2015
+
+3 months later
+Unpinned on Nov 18, 2015
+
+Unpinned on Nov 18, 2015
+
+
+Share
+
+Bookmark
+
+Normal
+You will be notified if someone mentions your @name or replies to you.
+
+New & Unread Topics
+Topic list, column headers with buttons are sortable.
+Topic	Replies	Views	Activity
+Change - AD01 form
+API Changes
+2	170	Jul 2025
+Stream says Invalid Authorisation
+API Issues
+1	154	May 2025
+Missing documentation to submit company account
+Documentation Issues
+1	91	27d
+Test application disappeared
+API Issues
+1	71	Aug 2025
+‘DocumentMetadata’ resource specification update
+Information
+0	99	Apr 2025
+Want to read more? Browse other topics in 
+API Changes
+ or view latest topics.
+Powered by Discourse
+Dev forum https://forum.companieshouse.gov.uk/

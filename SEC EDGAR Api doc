@@ -1,0 +1,3808 @@
+EDGAR Application Programming Interfaces (APIs)
+NOTE—This page provides information on how developers may use application programming interfaces (APIs) to access EDGAR submissions by company and extracted XBRL data. For information on how EDGAR filers may use APIs to check EDGAR system status, manage users, submit EDGAR filings, and check the status of submitted filings, see How Do I Understand EDGAR Application Programming Interfaces, How Do I Create and Manage Filer and User API Tokens, Overview of EDGAR APIs, and the API Development Toolkit.
+
+"data.sec.gov" was created to host RESTful data APIs delivering JSON-formatted data to external customers and to web pages on SEC.gov. These APIs do not require any authentication or API keys to access.
+
+Currently included in the APIs are the submissions history by filer and the XBRL data from financial statements (forms 10-Q, 10-K,8-K, 20-F, 40-F, 6-K, and their variants).
+
+The JSON structures are updated throughout the day, in real time, as submissions are disseminated.
+
+In addition, a bulk ZIP file is available to download all the JSON structures for an API. This ZIP file is updated and republished nightly at approximately 3:00 a.m. ET.
+
+data.sec.gov/submissions/
+Each entity’s current filing history is available at the following URL:
+
+https://data.sec.gov/submissions/CIK##########.json
+Where the ########## is the entity’s 10-digit central index key (CIK), including leading zeros.
+
+This JSON data structure contains metadata such as current name, former name, and stock exchanges and ticker symbols of publicly-traded companies. The object’s property path contains at least one year’s of filing or to 1,000 (whichever is more) of the most recent filings in a compact columnar data array. If the entity has additional filings, files will contain an array of additional JSON files and the date range for the filings each one contains.
+
+XBRL Data APIs
+XBRL (eXtensible Business Markup Language) is an XML-based format for reporting financial statements used by the SEC and financial regulatory agencies across the world. XBRL, in a separate XML file or more recently embedded in quarterly and annual HTML reports as inline XBRL, was first required by the SEC in 2009. XBRL facts must be associated for a standard US-GAAP or IFRS taxonomy. Companies can also extend standard taxonomies with their own custom taxonomies.
+
+The following XBRL APIs aggregate facts from across submissions that
+
+Use a non-custom taxonomy (e.g. us-gaap, ifrs-full, dei, or srt)
+Apply to the entire filing entity
+This ensures that facts have a consistent context and meaning across companies and between filings and are comparable between companies and across time.
+
+data.sec.gov/api/xbrl/companyconcept/
+The company-concept API returns all the XBRL disclosures from a single company (CIK) and concept (a taxonomy and tag) into a single JSON file, with a separate array of facts for each units on measure that the company has chosen to disclose (e.g. net profits reported in U.S. dollars and in Canadian dollars).
+
+https://data.sec.gov/api/xbrl/companyconcept/CIK##########/us-gaap/AccountsPayableCurrent.json
+data.sec.gov/api/xbrl/companyfacts/
+This API returns all the company concepts data for a company into a single API call:
+
+https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json
+data.sec.gov/api/xbrl/frames/
+The xbrl/frames API aggregates one fact for each reporting entity that is last filed that most closely fits the calendrical period requested. This API supports for annual, quarterly and instantaneous data:
+
+https://data.sec.gov/api/xbrl/frames/us-gaap/AccountsPayableCurrent/USD/CY2019Q1I.json
+Where the units of measure specified in the XBRL contains a numerator and a denominator, these are separated by “-per-” such as “USD-per-shares”. Note that the default unit in XBRL is “pure”.
+
+The period format is CY#### for annual data (duration 365 days +/- 30 days), CY####Q# for quarterly data (duration 91 days +/- 30 days), and CY####Q#I for instantaneous data. Because company financial calendars can start and end on any month or day and even change in length from quarter to quarter to according to the day of the week, the frame data is assembled by the dates that best align with a calendar quarter or year. Data users should be mindful different reporting start and end dates for facts contained in a frame.
+
+Cross Origin Resource Scripting (CORS)
+data.sec.gov does not support Cross Origin Resource Scripting (CORS). Automated access must comply with SEC.gov’s Privacy and Security Policy, as described in the Developer FAQs.
+
+Bulk Data
+The most efficient means to fetch large amounts of API data is the bulk archive ZIP files, which are recompiled nightly.
+
+The companyfacts.zip file contains all the data from the XBRL Frame API and the XBRL Company Facts API
+           https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip
+
+The submission.zip file contains the public EDGAR filing history for all filers from the Submissions API
+           https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip 
+
+Update Schedule
+The APIs are updated in real-time as filings are disseminated. The submissions API is updated with a typical processing delay of less than a second; the xbrl APIs are updated with a typical processing delay of under a minute. However these processing delays may be longer during peak filing times.
+
+We Want to Hear From You!
+Send your recommendations regarding how we are implementing our APIs to webmaster@sec.gov.
+
+Please note we cannot provide technical support for developing or debugging scripted downloading processes.
+
+Programmatic API Access
+See the Developer FAQs on how to comply with the SEC's website Privacy and Security Policy.
+
+Understand EDGAR Application Programming Interfaces (APIs)
+EDGAR Next application programming interfaces (APIs) provide, in machine-to-machine connections, a majority of the functions available on the EDGAR Filer Management dashboard, and a secure, efficient and automated method of interacting with EDGAR. 
+
+APIs are optional, and available to filers enrolled in EDGAR Next (or whose Form ID is granted on or after March 24, 2025). 
+
+A variety of APIs are available, including but not limited to: 
+
+A submission API to allow filers to make both live and test submissions on EDGAR (submission API). 
+A submission status API to allow filers to check the status of an EDGAR submission (submission status API). 
+An operational status API to allow filers to check EDGAR operational status (EDGAR operational status API). 
+For detailed information about APIs, see How Do I Create and Manage Filer and User API Tokens, Overview of EDGAR APIs, and the API Development Toolkit.
+
+Introduction to API Tokens
+Application Programming Interface (API) tokens are a security requirement for use of EDGAR Next APIs.
+
+As explained below, there are two different API tokens: the filer API token and the user API token.
+
+For information about EDGAR Next APIs, and additional information about filer API tokens and user API tokens, refer to How Do I Understand EDGAR Application Programming Interfaces (APIs), Overview of EDGAR APIs, and the API Development Toolkit.
+
+Create a Filer API Token
+A filer must present a filer API token to connect to APIs.
+
+A filer API token is valid for one year from date of creation.
+Filer API tokens must be created by a filer’s technical administrator.
+Each filer must have at least two technical administrators to connect to APIs.
+A filer’s technical administrators are responsible for managing the filer’s connections to APIs.
+Technical administrators may generate an unlimited number of filer API tokens on the dashboard.
+Multiple different filer API tokens can be used by the filer at any given time, and filer API tokens may overlap in duration.
+Exception for use of delegated entity filer API tokens: A filer may choose to use the filer API token and API connections of its delegated entity (so long as the filer’s delegated entity has authorized at least two technical administrators and complied with all other requirements of APIs).
+
+While the filer may use the filer API token of its delegated entity, the filer’s account administrator or user must present that individual’s own user API token (generated on the dashboard) to use the API (if the relevant API requires a user API token).
+A technical administrator may create a filer API token by following these steps:
+
+Log into the EDGAR Filer Management website using your Login.gov individual account credentials.
+Select My Accounts on the dashboard.
+If the My Accounts accordion is greyed out and inaccessible, then you have not been authorized for any filer account. You must be authorized for at least one filer account to view the My Accounts accordion.
+Always ensure that you have selected the number of Items per page (at bottom-right of the table) that will enable you to see the full scope of options available. Select the relevant filer.
+Select Manage Filer API Token.
+If the Manage Filer API Token is greyed out and inaccessible then you have not been authorized as a technical administrator and therefore cannot create the filer API Token.
+Select Create New Filer API Token.
+If you wish, you may name the filer API token for your reference. This step is optional.
+Select Create.
+If the filer does not have at least two technical administrators you will receive an error message directing you to add a technical administrator before a filer API token can be created.
+Copy and/or download the filer API token.
+If you copy the filer API token, a pop-up message appears indicating Success! Filer API Token copied to your clipboard.
+If you download the filer API token, a pop-up of the downloaded file appears.
+Select Done.
+
+A pop-up success message appears.
+A filer API token is generated, active, and displays the expiration date in the filer API token table located on the filer dashboard.
+You will receive an email verification at the address provided to create your Login.gov credentials for EDGAR.
+Inactivate a Filer API Token
+A filer’s technical administrator can inactivate a filer API token at any time. Once inactivated, no one will be able to use the token.
+
+Follow steps 1 through 4 under Create a Filer API Token above.
+Select the ellipsis next to the relevant token under the Actions column, select Inactivate, then choose Yes, Inactivate.
+A pop-up success message appears.
+You will receive an email verification at the address provided to create your Login.gov credentials for EDGAR.
+The status of the token will appear as Inactive on the dashboard.
+Create a User API Token
+Each account administrator or user must present that individual’s own user API token to certain APIs as described below.
+
+An account administrator or user must present that individual’s user API token to the EDGAR Submission API and any EDGAR Filer Management API.
+A user API token is not required for the EDGAR Submission Status API or the EDGAR Operational Status API.
+User API tokens are valid for 30 days from date of creation.
+An account administrator or user may generate a user API token.
+A technical administrator cannot generate a user API token (unless the technical administrator is also a user or account administrator).
+Each individual may only have one active user API token at any given time.
+Filers may avoid filing deadline concerns raised by the expiration of user API tokens by ensuring that multiple users and/or account administrators have user API tokens that expire on different dates.
+An account administrator or user may create a user API token by following these steps:
+
+Log into the EDGAR Filer Management website using your Login.gov individual account credentials.
+Select My User API Token.
+If this is the first time you are creating a user API token, a notice will appear indicating that you have not created a user API Token.
+Select Create User API Token.
+Read and review the user API token message, then select Create User API Token.
+You can copy and/or download your newly created user API token.
+If you copy the user API token, a pop-up message appears indicating Success! User API Token copied to your clipboard.
+If you download the user API token, a pop-up of the downloaded file appears.
+Create New User API Token option will display after you have created the initial user API token.)
+
+To inactivate a user API token, simply create a new user API token. When an individual creates a new user API token, the individual’s prior user API token is automatically inactivated by EDGAR.
+Introduction to API Tokens
+Application Programming Interface (API) tokens are a security requirement for use of EDGAR Next APIs.
+
+As explained below, there are two different API tokens: the filer API token and the user API token.
+
+For information about EDGAR Next APIs, and additional information about filer API tokens and user API tokens, refer to How Do I Understand EDGAR Application Programming Interfaces (APIs), Overview of EDGAR APIs, and the API Development Toolkit.
+
+Create a Filer API Token
+A filer must present a filer API token to connect to APIs.
+
+A filer API token is valid for one year from date of creation.
+Filer API tokens must be created by a filer’s technical administrator.
+Each filer must have at least two technical administrators to connect to APIs.
+A filer’s technical administrators are responsible for managing the filer’s connections to APIs.
+Technical administrators may generate an unlimited number of filer API tokens on the dashboard.
+Multiple different filer API tokens can be used by the filer at any given time, and filer API tokens may overlap in duration.
+Exception for use of delegated entity filer API tokens: A filer may choose to use the filer API token and API connections of its delegated entity (so long as the filer’s delegated entity has authorized at least two technical administrators and complied with all other requirements of APIs).
+
+While the filer may use the filer API token of its delegated entity, the filer’s account administrator or user must present that individual’s own user API token (generated on the dashboard) to use the API (if the relevant API requires a user API token).
+A technical administrator may create a filer API token by following these steps:
+
+Log into the EDGAR Filer Management website using your Login.gov individual account credentials.
+Select My Accounts on the dashboard.
+If the My Accounts accordion is greyed out and inaccessible, then you have not been authorized for any filer account. You must be authorized for at least one filer account to view the My Accounts accordion.
+Always ensure that you have selected the number of Items per page (at bottom-right of the table) that will enable you to see the full scope of options available. Select the relevant filer.
+Select Manage Filer API Token.
+If the Manage Filer API Token is greyed out and inaccessible then you have not been authorized as a technical administrator and therefore cannot create the filer API Token.
+Select Create New Filer API Token.
+If you wish, you may name the filer API token for your reference. This step is optional.
+Select Create.
+If the filer does not have at least two technical administrators you will receive an error message directing you to add a technical administrator before a filer API token can be created.
+Copy and/or download the filer API token.
+If you copy the filer API token, a pop-up message appears indicating Success! Filer API Token copied to your clipboard.
+If you download the filer API token, a pop-up of the downloaded file appears.
+Select Done.
+
+A pop-up success message appears.
+A filer API token is generated, active, and displays the expiration date in the filer API token table located on the filer dashboard.
+You will receive an email verification at the address provided to create your Login.gov credentials for EDGAR.
+Inactivate a Filer API Token
+A filer’s technical administrator can inactivate a filer API token at any time. Once inactivated, no one will be able to use the token.
+
+Follow steps 1 through 4 under Create a Filer API Token above.
+Select the ellipsis next to the relevant token under the Actions column, select Inactivate, then choose Yes, Inactivate.
+A pop-up success message appears.
+You will receive an email verification at the address provided to create your Login.gov credentials for EDGAR.
+The status of the token will appear as Inactive on the dashboard.
+Create a User API Token
+Each account administrator or user must present that individual’s own user API token to certain APIs as described below.
+
+An account administrator or user must present that individual’s user API token to the EDGAR Submission API and any EDGAR Filer Management API.
+A user API token is not required for the EDGAR Submission Status API or the EDGAR Operational Status API.
+User API tokens are valid for 30 days from date of creation.
+An account administrator or user may generate a user API token.
+A technical administrator cannot generate a user API token (unless the technical administrator is also a user or account administrator).
+Each individual may only have one active user API token at any given time.
+Filers may avoid filing deadline concerns raised by the expiration of user API tokens by ensuring that multiple users and/or account administrators have user API tokens that expire on different dates.
+An account administrator or user may create a user API token by following these steps:
+
+Log into the EDGAR Filer Management website using your Login.gov individual account credentials.
+Select My User API Token.
+If this is the first time you are creating a user API token, a notice will appear indicating that you have not created a user API Token.
+Select Create User API Token.
+Read and review the user API token message, then select Create User API Token.
+You can copy and/or download your newly created user API token.
+If you copy the user API token, a pop-up message appears indicating Success! User API Token copied to your clipboard.
+If you download the user API token, a pop-up of the downloaded file appears.
+Create New User API Token option will display after you have created the initial user API token.)
+
+To inactivate a user API token, simply create a new user API token. When an individual creates a new user API token, the individual’s prior user API token is automatically inactivated by EDGAR.
+
+version 1.10.0
+Overview
+Tokens
+Authentication
+Communication
+Server Endpoints
+EDGAR Operational Status API
+Filer Management API
+Submission API
+Submission Status API
+Resources
+Overview
+The purpose of this documentation is to provide information about how EDGAR filers may use Application Programming Interfaces (“APIs”) to check EDGAR system status, manage users, submit EDGAR filings, and check the status of submitted filings. (For information on how developers may use APIs to access EDGAR submissions by company and extracted XBRL data, see our resources regarding data.sec.gov.)
+
+These APIs are based on REST semantics with resource names that are based on the verbs or actions that are being performed on discrete resources within the system. In general these APIs use JSON for request and response communication and binary or XML requests for filing submissions.
+
+These APIs make use of standard HTTP semantics including various HTTP methods defined by the HTTP RFC as well as response codes as maintained by the Internet Assigned Numbers Authority (IANA).
+
+Tokens
+The EDGAR APIs make use of HTTP Bearer authentication with tokens provided by Filer Management. There are two types of tokens: the Filer API Token and the User API Token (collectively: API Tokens).
+
+API Tokens provide access to the EDGAR API and should be stored and handled securely. The SEC will never ask for the contents of a Token.
+
+These API Tokens are issued by the Filer Management application. The Filer API Token is generated by a Technical Admin and should be provided to applications that require it for communication with EDGAR. The User API Token is generated by individuals that will be creating or submitting filings to EDGAR. The User API Token should be provided to applications that will make use of the token when communicating with EDGAR on behalf of the individual.
+
+The API Tokens are JWT tokens in JOSE format with an encrypted payload that was signed before it was encrypted. For more information on the JWT format see the documentation at JWT.io.
+
+A JWT token is presented as a series of base64 stanzas separated by a "." character. The first stanza, the header, is not encrypted and contains information that may be useful to application or integration teams. The example JWT header, given below, is the first stanza from a sample Filer API Token.
+
+ewogICJjaWsiOiAiMDAwMDAwMDAwMCIsCiAgImtpZCI6ICI3NWM4ZDM3OS0yZDgyLTQxNWUtYTNjNS03NTAxNjk5ZTMxMDEiLAogICJhbGciOiAiRUNESC1FUyIsCiAgImV4cGlyZXNBdCI6ICIyMDI1LTA3LTI1VDAzOjAwOjAwWiIKfQ==
+When decoded this header contains some useful information for both the EDGAR API and applications integrating with the EDGAR API.
+
+{
+  "cik": "0000000000",
+  "kid": "75c8d379-2d82-415e-a3c5-7501699e3101",
+  "alg": "ECDH-ES",
+  "expiresAt": "2025-07-25T03:00:00Z"
+}
+In the case of the Filer API Token you can see that it contains the key ID ("kid") and the algorithm ("alg") used to encrypt the payload. This is required by the server to decode the JWT provided to the EDGAR API.
+
+In this header the CIK ("cik") and expires at ("expiresAt") fields are present in addition to the key ID and algorithm. The CIK is the CIK that the Filer API Token is assigned to and can be used by applications to ensure that the Filer API Token matches the organization that is communicating with the EDGAR API. Optionally, filers could also specify a login CIK if there is a delegation from the EDGAR account corresponding to the login CIK to the filer API token EDGAR account/CIK. Delegations can be established on the Filer Management dashboard under “Manage Delegations and User Groups.” For more information on establishing delegations, see How Do I “Understand and Manage Delegation.”
+
+The expires at ("expiresAt") field allows applications to check the expiration status of a token without making a call to the EDGAR API. This does not check if the token has been manually revoked but allows applications to check the status of tokens locally.
+
+The User API Token contains similar information in the same format. There is useful information contained in the header stanza that can be used by applications to determine information about the token.
+
+{
+  "kid": "75c8d379-2d82-415e-a3c5-7501699e3101",
+  "alg": "ECDH-ES",
+  "userId": "0ebc7681-2b96-42a8-8e76-efd8c23b1b13",
+  "expiresAt": "2024-08-24T03:00:00Z"
+}
+The User ID is also contained within the header. This gives applications the capability to uniquely identify the token. The expires at ("expiresAt") field also gives applications the ability to determine if the token should still be valid without calling the EDGAR API. This only checks for expiration and the token could still be revoked within the EDGAR system.
+
+Token Expiration
+To prevent expiring tokens from interrupting the filing process the Filer API Tokens and the User API Tokens are set to expire on weekdays and outside of business hours. This means that each token will be issued for the time explained in the table below and then it will be checked to ensure that it does not expire on a day that EDGAR is not operating.
+
+Token Type	Minimum Validity
+Filer API Token	1 year
+User API Token	30 days
+Note: the system cannot account for holidays that have not been determined in the schedule at the time the token is issued.
+
+Authentication
+Authorize
+In order to authenticate to the EDGAR APIs the token or tokens that will be used must be added to the "Authorization" header with the "bearer " prefix. For example: given a token like 'abc123' the contents of the "Authorization" header would be "bearer abc123". In the event that two tokens are being used they should be separated by a "," or a " ". For example: given the Filer API Token "filer123" and the User API Token "user345" the contents of the "Authorization" header would be "bearer filer123,user345".
+
+The EDGAR system will calculate authorization to use API resources based on the tokens provided. The CIK represented by the Filer API Token and the individual represented by the User API token are used to determine if the request can be completed by the system.
+
+In the OpenAPI Specification that the EDGAR APIs use each of the two possibilities for presenting tokens is covered by a Security Scheme. Each API method uses either the "Filer API Token" security scheme or the "Filer API Token and User API Token" security scheme. Each of these schemes expect a token (or tokens) issued by the Filer Management application and presented in the way described above.
+
+To test APIs with Authorization you can click the Authorize button above or click the "lock" icon next to any API resource. This will allow you to set the "bearer" authentication for any requests that use the same security scheme.
+
+Authentication Errors
+The EDGAR API methods that require Token authentication will return status messages when the token(s) sent with the request are not valid for use with the EDGAR APIs. The intent of these messages is to narrow down the range of problems to assist in removing invalid tokens or updating the contents of tokens that are not valid.
+
+Each message will include the index of the token implicated in the issue as part of the message. The index starts at "1". If two tokens are sent then "1" would represent what is identified as the first token sent and "2" would be the second token.
+
+If the request is prevented from authenticating (and receiving a 401 or 403 status code) messages will generally be of the level "ERROR". If the request authenticates these messages will be returned as "NOTICE" level messages with the response.
+
+Sample Error	Recommend Action
+token {index} is not in the format expected by this application, check the contents of the token	This indicates that the token provided is not in the JWE (JSON Web Encryption) format required of JWT tokens used with this application. This could be due to a partial token being provided to the application or other issues transferring or copying the token.
+token {index} is missing a required header field ({field name})	The JWE header has been modified in a way that makes it incompatible with the EDGAR APIs. Token modification makes the token invalid.
+token {index} does not have required header fields for verification	The JWE header has been modified in a way that makes it incompatible with the EDGAR APIs. Token modification makes the token invalid.
+token {index} is not valid for use with this application	The token does not match the expectations of a token created for use with this system. This could mean that the token is being presented to the wrong environment (ex: a token created for a test environment is being used against the production system) or the token is from a different application altogether.
+token {index} of type {type} is either expired or has been revoked, check Filer Management for more details	The token that came with this request is no longer valid within the system. This usually indicates that the token has expired or has been revoked. Checking Filer Management is the only way to determine the status of the individual token. The 'type' value will either be 'Filer API Token' or 'User API Token'.
+only one token of a given type can be used at a time, token {index} is of the same type ({type}) as another token	A token that was presented was the same type as a token parsed earlier. The EDGAR APIs can only accept one token of a given type (Filer API Token, User API Token) with each request. The first valid token presented with a given request and of a unique type will be the token used to process the request. This message is intended to provide guidance if multiple tokens of the same type are sent. The 'type' value will either be 'Filer API Token' or 'User API Token'.
+If, for example, the request contained a valid Filer API Token and an invalid User API Token in the header a message like the following could be returned:
+
+
+{
+  "tracking": "38ab654e20162523396d447d22ae8887",
+  "locator": "4n05cc",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden"
+    },
+    {
+      "type": "ERROR",
+      "content": "token 2 is not in the format expected by this application, check the contents of the token"
+    }
+  ]
+}
+This is a 403 error because, while some valid credentials were submitted with the request, those credentials alone did not meet the requirements to access the resource that was requested. The system cannot accept the second token (token index 2) either because the token is in an invalid format or was not created for use with the application it was sent to. A message is returned at the error level for both the http "Forbidden" response and for the token parsing failure.
+
+Communication
+A typical request to an EDGAR API would be made over HTTP, supplying an API Token, and would contain either JSON or XML contents. The following simple GET request is to get the status of the EDGAR system.
+
+GET /status HTTP/1.1
+Authorization: bearer eyJjaWsiOiIwMDAxMzE2MDAzIiwia2lkIjoiOThiOTg0ZTk1NTk5Y2Y3YWNlMDRjYzk1N2U2OWE1MDIiLCJhbGciOiJFUzUxMiIsImV4cGlyZXNBdCI6IjIwMjUtMDctMjVUMDM6MDA6MDBaIiwidHlwIjoiSldUIn0.eyJKV1QiOiJFTkNSWVBURUQgVkFMVUUifQ.AeF5hGsaJnQQEZUk-OBfVUzf-nuu5zJSn9MSK5Y7eSlj0RiJ_7jKKUA4J11I61tfe5TOBxrnhwqMiWuzdl3gtJnyAIqBeF-G5_A93EUbI3ttW_pUXQupKsdmW1lDnHyS3ciGbCfkeXz28VWSufMLORqzq1wi-EzgpbT9cFrZR7YGMOj9
+Accept: application/json
+A typical EDGAR API response will include an HTTP status code as well as a response body. The HTTP status code is the primary indicator of the status of a response. In general: a response in the 200-299 range is a "success" response, a response in the 400-499 range represents that something is wrong with the request, and anything in the 500-599 range means that something went wrong while processing the request.
+
+The response body that returns from the API will include a tracking ID ("tracking") that can be used when communicating with the Help Desk to identify the particular request in question. The response will also include a property called "locator" that can also assist the Help Desk in finding the record in the EDGAR system.
+
+200 OK
+Content-Type: application/json
+
+{
+  "tracking": "3d1368057d0d3f66230327490100f06a",
+  "locator": "32c238",
+  "message": "EDGAR is operating normally. All submissions will receive today’s filing date.",
+  "condition": "ACCEPTING"
+}
+In addition to the tracking ID and locator there are other elements that can be found among responses. The messages can contain information that can indicate further information about a response. These are intended to be supplemental to any HTTP code that is returned.
+
+Request Headers
+During communication with EDGAR API resources the only explicitly required HTTP request header is the "Authorization" header used to communicate token information. The EDGAR APIs are entirely stateless and do not require any other request headers or cookies to be sent with the request.
+
+When using Submission API resources (such as Single Test Filing or Single Live Filing) the client can also provide the "Expect" header with the content "100-continue." This will allow the EDGAR API resource to respond more efficiently to the request and evaluate the request before the client sends the full body of the request. More information on the "Expect" header and the functionality of "100-continue" can be found in the HTTP RFC.
+
+Rate Limiting
+The EDGAR API resources may rate-limit specific resources based on the needs of the EDGAR system. In general the Developer Resources provide for certain rate limits and behaviors of clients accessing EDGAR systems. The specific rate limits for the EDGAR API resources are subject to change.
+
+In the event that a rate limit is exceeded the 429 (Too Many Requests) status code will be returned. More information on this code can be found in the status code table.
+
+Some resources will return response headers indicating a caching status through the use of the "ETag" header, "Last-Modified" header, or the "Cache-Control" header with "max-age" directive. Clients should be aware of these headers and use them to gauge how long they should wait between requests for a specific resource.
+
+Response Codes
+The APIs use common HTTP status response codes as registered with the IANA. The following table shows the common codes and when/how they are generally used in the EDGAR APIs
+
+Code	Status	Description
+200	OK	
+The API resource was accessed successfully. Messages may be attached to the response for additional context.
+
+202	Accepted	
+The API resource was accessed successfully. This status code is used by the submission API to indicate that the submission has been transmitted to EDGAR and that it has an Accession Number. In the HTTP standard this response is used to indicate that there is further processing that will be done on the resource after the response.
+
+204	No Content	
+The API resource that was requested is empty. This can be used when a list of items is requested but no items were found to populate the list. A 204 response is empty and will include no JSON and cannot be parsed.
+
+400	Bad Request	
+The API resource was not able to process the request because of an error with the request. The messages returned with this request will provide more insight into the nature of the error.
+
+401	Unauthorized	
+The request made to the API resource was not able to be authorized. This usually means that invalid token material was provided with the "Authorization" header. This could mean a partial or corrupted token or a token that has expired.
+
+403	Forbidden	
+The request made to the API has been authorized, meaning that the tokens presented contain enough information to identify the Filer and the User (if required), but that identifying information does not have the rights or permission to access the resource.
+
+There are several reasons this could happen. The most common is when making a submission and the Filer API Token and User API Token combination does not have delegated permissions for the CIK or Login CIK combination. A user that is locked in Filer Management will also cause a "Forbidden" response.
+
+Another scenario that produces "Forbidden" is requesting the status of a submission with a Filer API Token that does not match the CIK or Login CIK of the submission and does not have delegation to either.
+
+404	Not Found	
+The requested API resource was not found. This may mean the URL path used is invalid or is no longer being used.
+
+405	Method Not Allowed	
+Typically seen when using the wrong method to send data to an API resource. Each resource responds to either a single specific method or a set of methods. Using the wrong method, like PUT instead of POST, will cause this response.
+
+406	Not Acceptable	
+Each API resource expects the client to accept a response in "application/json" format through the use of the "Accept" header. Any other value in the "Accept" header will cause the API resource to respond with the "Not Acceptable" response.
+
+411	Length Required	
+When accessing the Submission API resources a "Content-Length" header is required if not using the "Transfer-Encoding" header with the last value "chunked". If not provided the API may respond with this status code.
+
+413	Content Too Large	
+The EDGAR API will reject submissions that are larger than 850M. This value is independent of maximum filing sizes in EDGAR and is separately configurable. A submission successfully transmitted through an EDGAR API resource can still be suspended by EDGAR due to being too large.
+
+415	Unsupported Media Type	
+Each API resource expects to provide a response in a supported media type. In general the preferred media type for requests and responses is "application/json" however some methods do support "application/xml" in both request and response. Notably the submission resources expect the request to be either "application/xml" or "application/octet-stream". The Filer Management resources are "application/json" only. This media type is specified by the client using the "Content-type" header.
+
+429	Too Many Requests	
+In the event that an API resource is being requested too often a status code of 429 may be returned. This is a signal that either the service has become overloaded and cannot handle more requests or that the client is making too many requests in a given timeframe and is being asked to make requests less frequently.
+
+In the Developer Resources page there is more information on Fair Access and how various resources should be accessed.
+
+500	Internal Server Error	
+When the EDGAR API resource that was requested encounters an error processing the request a status code of 500 will be returned. The help desk can be contacted in cases with persistent errors of this nature.
+
+503	Service Unavailable	
+This method is returned by EDGAR API resources when they are unavailable such as when EDGAR is out of operating hours.
+
+These status codes are provided in reference to communication between the requestor and the API and are indicative of the communication between the requestor and the EDGAR API resources. It is possible for systems between the requestor and the EDGAR API to produce and return their own status codes.
+
+The EDGAR Operational Status API will return a 200 in most cases, regardless of the system status. This is to indicate that the API resource has received, understood, and processed the response. If a 400 or 500 is encountered while accessing this resource then the requesting party would determine that there has been an error. If a 200 response is received with a condition of `NO_COMMUNICATION` then the requesting party knows that, while EDGAR is not able to respond, the API was able to provide a notification of that condition.
+
+Error Responses
+The API resources will return an error response when the HTTP status code is in the range of 400-599. An error response from the API methods will consist of an HTTP code, a tracking and locator value, and any relevant messages. The JSON body of an error response would look like this:
+
+
+{
+  "tracking": "2c553b10627d665a6c3dbd06b282fd0a",
+  "locator": "5baa97",
+  "messages": [
+    {"type": "ERROR", "content": "Forbidden"}
+  ]
+}
+An error response will include at least one but possible more messages. In many cases the message will match the standard HTTP status code reason but in some cases they may provide more context to the error.
+
+User Agent
+It is expected that every request to an EDGAR API resource includes a "User-Agent" header that identifies the vendor and version of the software being used to contact EDGAR API resources. The content of this header will make it easier for integrators and SEC EDGAR staff to work together to identify issues accessing EDGAR resources.
+
+Failure to provide this header may result in "NOTICE" level messages from the API or may result in a request returning a response code of 400 for failing to provide a valid user agent.
+
+Server Endpoints
+The EDGAR API specification defines the specific server endpoints for communicating with different services. The servers are specified independently to enable flexibility in the future and should be considered as separate resources by implementors.
+
+Server Name	Base URL
+EDGAR Operational Status API	https://api.edgarfiling.sec.gov
+EDGAR Submission API	https://api.edgarfiling.sec.gov
+EDGAR Filer Management API	https://api.edgarfiling.sec.gov
+Each API resource path is relative to the server specified in the endpoint specification for that resource. The full path to any resource is the path of the server and the path of the method combined. For example, to create the path to the Status resource of the EDGAR Status API you would need the base url for the EDGAR Status API and the path to the status resource.
+
+https://api.edgarfiling.sec.gov/status
+This URL would be appropriate for a "get" request to determine the status of the EDGAR system.
+
+
+EDGAR Operational Status API
+This API reports the status of the EDGAR system. This resource requires presentation of a Filer API Token only.
+
+
+GET
+/status
+EDGAR System Status
+
+
+Description
+Uses EDGAR operating hours logic and communicates with other EDGAR components to determine the ability of the system to receive API calls and submissions.
+
+Endpoint
+https://api.edgarfiling.sec.gov/status
+
+Parameters
+Try it out
+No parameters
+
+Responses
+Code	Description	Links
+200	
+Ok. The EDGAR system was able to provide a status response.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+Accepting submissions
+Example Value
+Schema
+{
+  "tracking": "6345f99403f9c8014e4332a8cba2c5a6",
+  "locator": "l33922",
+  "message": "EDGAR is available because EDGAR is reporting that it is operational and within operating hours.",
+  "condition": "ACCEPTING"
+}
+Example Description
+EDGAR is available because EDGAR is reporting that it is operational and within operating hours.
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. This resource requires a valid Filer API Token. Please ensure that the token that is being used is a Filer API Token and is active in Filer Management.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request has included at least one valid token but that token do not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Server Error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+Filer Management API
+A set of API endpoints that allows you to verify permissions, get filer information, manage CCC, manage individuals, and manage delegations.
+
+
+GET
+/fm/{cik}
+View filer account information
+
+
+Description
+The view filer account information API provides the ability to view filer information for an EDGAR account/CIK. This API will require the following inputs: the filer API token, the user API token, and the EDGAR account/CIK for which information is being retrieved. The individual associated with the user API token must be a user, account administrator, delegated user, delegated account administrator, or technical administrator of the CIK for which account information is to be viewed. The filer API token supplied for the request must either match that CIK or the CIK of the filer API token must have delegation from that CIK.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+OK
+Example Value
+Schema
+{
+  "tracking": "f0bd5ef3aaf666475b7b466d46120973",
+  "locator": "nfkkg",
+  "messages": [
+    {
+      "type": "INFO",
+      "content": "OK"
+    }
+  ],
+  "filerInfo": [
+    {
+      "cik": "0000000000",
+      "stateCode": "TX",
+      "irsNumber": "000000000",
+      "entityType": "A",
+      "dateIncorporated": "1970-01-01 00:00:00",
+      "sicCode": "6189",
+      "fyEnd": "0630",
+      "individualOrCompany": "C",
+      "specialFilerType": "string",
+      "legalEntityIdentifier": "ABCD123456789012",
+      "repFileNum": "123-123456-12",
+      "dateModified": "2024-01-01T12:00:00Z",
+      "entityName": "Filers Inc",
+      "entityDbaName": "string",
+      "entityForeignName": "string",
+      "mailIsForeignAddress": "false",
+      "mailStreet1": "123 Broadway",
+      "mailStreet2": "Suite 200",
+      "mailCity": "Dallas",
+      "mailStateCode": "K3",
+      "mailForeignState": "Maharashtra",
+      "mailZip": "75240",
+      "businessIsForeignAddress": false,
+      "businessStreet1": "123 Broadway",
+      "businessStreet2": "Suite 200",
+      "businessCity": "Dallas",
+      "businessStateCode": "TX",
+      "businessForeignState": null,
+      "businessZip": "75240",
+      "peoStreet1": "string",
+      "peoStreet2": "string",
+      "peoCity": "string",
+      "peoStateCode": "string",
+      "peoZip": "string",
+      "acctName": "Chris",
+      "acctPhone": "555-555-5555",
+      "acctStreet1": "123 MAIN ST. - BILLING",
+      "acctStreet2": null,
+      "acctCity": "ANYTOWN",
+      "acctStateCode": "TX",
+      "acctZip": "12345",
+      "acctEmail": "chris@somecompany.com",
+      "contName": "James Smith",
+      "contPhone": "555-555-5555",
+      "contEmail": "james@somecopany.com",
+      "mailingPhone": "555-555-5555",
+      "businessPhone": "555-555-5555",
+      "ccc": "@1B2C3d4",
+      "confirmationDueDate": "Date",
+      "singleEntityCompany": "false",
+      "website": "www.somecompany.com",
+      "series": []
+    }
+  ]
+}
+Example Description
+Details about a filer/entity (e.g., name, address, dba-name, foreign-name, etc.)
+
+
+No links
+400	
+Bad request. The request was not successful, possibly due to invalid data
+
+Media type
+
+application/json
+Examples
+
+Bad request
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "ERROR",
+      "message": "Invalid data"
+    }
+  ]
+}
+Example Description
+Input error (invalid data)
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to perform the action.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request had included valid tokens but that does not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+
+POST
+/fm/{cik}/ccc
+Generate CCC
+
+
+Description
+The generate CCC API allows a filer to have EDGAR randomly generate a new CCC for the filer. This API will require the filer API token, the user API token, and the CIK of the EDGAR account for which the CCC will be generated. The individual associated with the user API token must be an account administrator of the EDGAR account/CIK for which the CCC is to be generated. The filer API token supplied for the request must either match the CIK of the EDGAR account for which the CCC is to be generated or the CIK of the filer API token must have delegation from that CIK.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}/ccc
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Example Value
+Schema
+{
+  "tracking": "string",
+  "locator": "string",
+  "messages": [
+    {
+      "type": "NOTICE",
+      "content": "The Filer API Key making this request will expire in less than two weeks."
+    }
+  ],
+  "filerCCC": "@1B2C3d4"
+}
+No links
+400	
+Bad request. The request was not successful, possibly due to invalid data
+
+Media type
+
+application/json
+Examples
+
+Bad request
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "ERROR",
+      "message": "Invalid data"
+    }
+  ]
+}
+Example Description
+Input error (invalid data)
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to perform the action.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request had included valid tokens but that does not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+
+PUT
+/fm/{cik}/ccc
+Create custom CCC
+
+
+Description
+The create custom CCC API allows a filer to specify a new CCC. The API will require the following inputs: the filer API token, the user API token, the CIK of the EDGAR account for which the custom CCC will be created, the current CCC, and the new CCC. The individual associated with the user API token must be an account administrator of the EDGAR account/CIK for which the CCC is to be changed. The filer API token supplied for the request must either match the CIK for which the CCC is to be changed or the CIK of the filer API token must have delegation from that CIK.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}/ccc
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Request body
+
+application/json
+Update CCC object (Current CCC, Replacement CCC)
+
+Examples: 
+Update CCC
+Example Value
+Schema
+{
+  "currentCCC": "xxxxxxxx",
+  "replacementCCC": "yyyyyyyy"
+}
+Example Description
+Update CCC
+
+
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Example Value
+Schema
+{
+  "tracking": "string",
+  "locator": "string",
+  "messages": [
+    {
+      "type": "NOTICE",
+      "content": "The Filer API Key making this request will expire in less than two weeks."
+    }
+  ],
+  "filerCCC": "@1B2C3d4"
+}
+No links
+400	
+Bad request. The request was not successful, possibly due to invalid data
+
+Media type
+
+application/json
+Examples
+
+Bad request
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "ERROR",
+      "message": "Invalid data"
+    }
+  ]
+}
+Example Description
+Input error (invalid data)
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to perform the action.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request had included valid tokens but that does not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+
+POST
+/fm/{cik}/delegationRequests
+Request delegation invitations
+
+
+Description
+The request delegation invitations API provides the ability for an EDGAR account (for example, a filing agent) to request delegation from one or more filers. If a filer accepts the delegation request, a delegation invitation will be sent from the filer to the EDGAR account requesting delegation. If the delegation invitation is accepted by the EDGAR account requesting delegation, that EDGAR account will become a delegated entity that can submit filings on behalf of the filer. This API will require the following inputs: the filer API token, the user API token, the CIK belonging to the requesting EDGAR account that would like to become a delegated entity, and CIK(s) that will receive the delegation request. The individual associated with the user API token must be an account administrator of the CIK requesting a delegation invitation. The filer API token supplied for the request must match the CIK requesting a delegation invitation.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}/delegationRequests
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Request body
+
+application/json
+List of delegation request filer/entity CIKs
+
+Examples: 
+Delegation request single CIK
+Example Value
+Schema
+[
+  "0000000001"
+]
+Example Description
+Delegation request to single CIK
+
+
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+OK
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "INFO",
+      "message": "<<message>>"
+    }
+  ]
+}
+Example Description
+ADD DELEGATION REQUESTS OK description
+
+
+No links
+400	
+Bad request. The request was not successful, possibly due to invalid data
+
+Media type
+
+application/json
+Examples
+
+Bad request
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "ERROR",
+      "message": "Invalid data"
+    }
+  ]
+}
+Example Description
+Input error (invalid data)
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to perform the action.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request had included valid tokens but that does not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+
+POST
+/fm/{cik}/delegations
+Send delegation invitations
+
+
+Description
+The send delegation invitations API provides the ability for a filer to delegate to one or more EDGAR accounts. If those EDGAR accounts accept the delegation invitation, those EDGAR accounts will become delegated entities who can submit filings on behalf of the delegating filer. This API will require the following inputs: the filer API token, the user API token, the delegating filer’s CIK, and a list of one or more delegated entity CIKs that will receive the delegation invitation. The individual associated with the user API token must be an account administrator of the CIK from which delegation invitations are to be sent. The filer API token supplied for the request must match that CIK.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}/delegations
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Request body
+
+application/json
+List of delegation filer/entity CIKs
+
+Examples: 
+Delegate to single CIK
+Example Value
+Schema
+[
+  "0000000001"
+]
+Example Description
+Delegate to single CIK
+
+
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+OK
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "responses": [],
+  "messages": [
+    {
+      "type": "INFO",
+      "message": "<<message>>"
+    }
+  ]
+}
+Example Description
+ADD DELEGATIONS OK description
+
+
+No links
+400	
+Bad request. The request was not successful, possibly due to invalid data
+
+Media type
+
+application/json
+Examples
+
+Bad request
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "ERROR",
+      "message": "Invalid data"
+    }
+  ]
+}
+Example Description
+Input error (invalid data)
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to perform the action.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request had included valid tokens but that does not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+
+GET
+/fm/{cik}/delegations
+View delegations
+
+
+Description
+The view delegations API provides the ability for a filer/EDGAR account to retrieve a list of all its delegations to and from other EDGAR accounts/CIKs. This API will require the following inputs: the filer API token, the user API token, and the EDGAR account/CIK for which delegation information is to be retrieved. The individual associated with the user API token must be a user or an account administrator of the CIK for which delegation information is to be retrieved. The filer API token supplied for the request must match that CIK.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}/delegations
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+OK
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "delegationsTo": [],
+  "delegationsFrom": [],
+  "messages": [
+    {
+      "type": "INFO",
+      "message": "OK"
+    }
+  ]
+}
+Example Description
+GET DELEGATIONS OK description
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to perform the action.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request had included valid tokens but that does not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+
+POST
+/fm/{cik}/individuals
+Add individuals
+
+
+Description
+The add individuals API allows for one or more individuals to be added in specific role(s) for a filer. This API will require the following inputs: the filer API token, the user API token, the EDGAR account CIK for which individuals are to be added, a list of individuals (identified by their names and Login.gov email addresses), and their new roles. The individual associated with the user API token must be an account administrator of the CIK for which individuals are to be added. The filer API token supplied for the request must either match the CIK for which individuals are to be added or the CIK of the filer API token must have delegation from that CIK.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}/individuals
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Request body
+
+application/json
+List of individuals and associated roles
+
+Examples: 
+Single individual (with email, first name, middle name, last name) and related roles
+Example Value
+Schema
+[
+  {
+    "email": "barry.allen@flash.com",
+    "firstName": "Bartholomew",
+    "middleName": "Henry",
+    "lastName": "Allen",
+    "inAdminRole": false,
+    "inTechAdminRole": true,
+    "inUserRole": true
+  }
+]
+Example Description
+Single individual (with email, first name, middle name, last name) and related roles
+
+
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+OK
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "responses": [],
+  "messages": [
+    {
+      "type": "INFO",
+      "message": "Invite(s) created."
+    }
+  ]
+}
+Example Description
+ADD INDIVIDUALS OK DESCRIPTION
+
+
+No links
+400	
+Bad request. The request was not successful, possibly due to invalid data
+
+Media type
+
+application/json
+Examples
+
+Bad request
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "ERROR",
+      "message": "Invalid data"
+    }
+  ]
+}
+Example Description
+Input error (invalid data)
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to perform the action.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request had included valid tokens but that does not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+
+GET
+/fm/{cik}/individuals
+View individuals
+
+
+Description
+The view individuals API provides the ability to view all individuals with a role for an EDGAR account/CIK. This API will require the following inputs: the filer API token, the user API token, and the CIK for which individuals are to be viewed. The individual associated with the user API token must be an account administrator of the CIK for which individuals are to be viewed. The filer API token supplied for the request must either match the CIK for which individuals are to be viewed or the CIK of the filer API token must have delegation from that CIK.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}/individuals
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+OK
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "individuals": [],
+  "messages": [
+    {
+      "type": "INFO",
+      "message": "OK"
+    }
+  ]
+}
+Example Description
+GET INDIVIDUALS OK description
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to perform the action.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request had included valid tokens but that does not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+
+PUT
+/fm/{cik}/individuals
+Change roles
+
+
+Description
+The change roles API provides the ability to update roles for individuals for a CIK. This API will require the following inputs: the filer API token, the user API token, the EDGAR account CIK for which roles are to be changed, a list of the individuals (identified by their Login.gov email addresses), and their new roles (updated roles). The individual associated with the user API token must be an account administrator of the CIK for which roles are to be changed. The filer API token supplied for the request must either match the CIK for which roles are to be changed or the CIK of the filer API token must have delegation from that CIK.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}/individuals
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Request body
+
+application/json
+List of emails and related roles for updating individual roles
+
+Examples: 
+Update role for single individual (email and related roles)
+Example Value
+Schema
+[
+  {
+    "email": "money.penny@007.com",
+    "inAdminRole": false,
+    "inTechAdminRole": false,
+    "inUserRole": true
+  }
+]
+Example Description
+Update role for single individual (email and related roles)
+
+
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+OK
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "INFO",
+      "message": "<<message>>"
+    }
+  ]
+}
+Example Description
+UPDATE INDIVIDUAL ROLES OK DESCRIPTION
+
+
+No links
+400	
+Bad request. The request was not successful, possibly due to invalid data
+
+Media type
+
+application/json
+Examples
+
+Bad request
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "ERROR",
+      "message": "Invalid data"
+    }
+  ]
+}
+Example Description
+Input error (invalid data)
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to perform the action.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request had included valid tokens but that does not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+
+DELETE
+/fm/{cik}/individuals
+Remove individuals
+
+
+Description
+The remove individuals API provides the ability to remove one or more individuals. This API will require the following inputs: the filer API token, the user API token, the EDGAR account CIK for which individuals are to be removed, a list of individuals (identified by their Login.gov email addresses), and their roles to be removed. The individual associated with the user API token must be an account administrator of the CIK for which individuals are to be removed. The filer API token supplied for the request must either match the CIK for which individuals are to be removed or the CIK of the filer API token must have delegation from that CIK.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}/individuals
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Request body
+
+application/json
+List of emails of individuals for removal
+
+Examples: 
+Remove single individual (email)
+Example Value
+Schema
+[
+  "money.penny@007.com"
+]
+Example Description
+Remove single individual (email)
+
+
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+OK
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "INFO",
+      "message": "<<message>>"
+    }
+  ]
+}
+Example Description
+REMOVE INDIVIDUALS OK DESCRIPTION
+
+
+No links
+400	
+Bad request. The request was not successful, possibly due to invalid data
+
+Media type
+
+application/json
+Examples
+
+Bad request
+Example Value
+Schema
+{
+  "tracking": "c209d91efee936e1d315d868f06f763d",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "ERROR",
+      "message": "Invalid data"
+    }
+  ]
+}
+Example Description
+Input error (invalid data)
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to perform the action.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request had included valid tokens but that does not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+
+GET
+/fm/{cik}/verify
+Filing credentials verification
+
+
+Description
+The filing credentials verification API provides the ability to view filing credentials for an EDGAR account/CIK. The API GET method requires the filer API token and the user API token in the header along with the relevant CIK in the path of the URL. The individual associated with the user API token must be a user, account administrator, delegated user, or delegated account administrator of the CIK for which the filing credentials are to be verified. The filer API token supplied for the request must either match the CIK for which filing credentials are to be verified or the CIK of the filer API token must have delegation from that CIK.
+
+Endpoint
+https://api.edgarfiling.sec.gov/fm/{cik}/verify
+
+Parameters
+Try it out
+Name	Description
+cik *
+string
+(path)
+cik
+Responses
+Code	Description	Links
+200	
+OK. The request was successful.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+OK - Can file
+Example Value
+Schema
+{
+  "tracking": "8bdd9ff5f82da173d41bf1ed03a80af4",
+  "locator": "47a94d",
+  "messages": [
+    {
+      "type": "INFO",
+      "content": "OK"
+    }
+  ],
+  "canFile": false
+}
+Example Description
+Individual can file.
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Internal server error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+Submission API
+Submission of filings to EDGAR by API can be made through the Submission API. The Submission API requires the presentation of a Filer API Token in combination with a User API Token. Optionally, filers could also specify a login CIK if there is a delegation from the EDGAR account corresponding to the login CIK to the filer API token EDGAR account/CIK. Delegations can be established on the Filer Management dashboard under “Manage Delegations and User Groups.” For more information on establishing delegations, see How Do I “Understand and Manage Delegation.”
+
+Filings transmitted through the Submission API are expected to conform to the filing standard(s) provided by the SEC. Information is provided on the required format and contents of filings by the Technical Specifications. Information and guidance on filing can be found in the EDGAR Filing Manual. Information on specific forms can be found in the SEC Forms Index.
+
+The Submission API will return accession numbers for the submitted filings. A 202 HTTP status code indicates only that processing will begin in EDGAR and an accession number or accession numbers have been generated. Filings with errors will be processed and suspended by EDGAR. The results of processing (status and errors) are not provided by this endpoint and are instead available to clients using the API through the Submission Status API.
+
+When using Submission API endpoints, the client can optionally specify the "Expect: 100-continue" HTTP request header to allow a response from these API resources to be returned before uploading the entire filing in the event that the EDGAR API determines that the request will not be allowed. This header should only be used for requests that have a body more than 1MiB in size.
+
+Filings may be transmitted via either SINGLE or BULK transmission. A SINGLE transmission provides a single filling and will result in a response containing an accession number if the filing is transmitted successfully or an error if there is an issue while transmitting the filing. Even if a filing is successfully transmitted through the submission API, the filing may still be suspended by EDGAR if the contents of the filing do not satisfy EDGAR filing requirements. The accession number may be provided to the Submission Status API in order to check whether the filing was accepted by EDGAR.
+
+A BULK filing, in contrast, is a single document that contains multiple filings to be submitted. If one or more filings are successfully transmitted then one or more accession numbers will be created and returned in the same order filings are included in the BULK filing document. However, if a filing is not successfully transmitted then an accession number may not be created, which means that the filer may have difficulty determining which accession number corresponds to which filing in the BULK filing document. Even if a filing is successfully transmitted through the Submission API, the filing may still be suspended by EDGAR if the contents of the filing do not satisfy EDGAR filing requirements. The relevant accession number may be provided to the Submission Status API in order to check whether the filing was accepted by EDGAR.
+
+
+POST
+/submission/bulk/live
+Bulk Live Submission
+
+
+Description
+Allows an authorized filer to transmit a BULK LIVE submission file. When an authorized filer transmits a filing to this resource it will transmit the file to EDGAR and return a list of accession numbers. EDGAR will then begin processing the submissions.
+
+Endpoint
+https://api.edgarfiling.sec.gov/submission/bulk/live
+
+Parameters
+Try it out
+Name	Description
+X-EDGAR-CIK
+string
+deprecated
+(header)
+DEPRECATED in favor of X-EDGAR-LOGIN-CIK. If a value is sent in X-EDGAR-LOGIN-CIK this header will be ignored. If no header value is sent in X-EDGAR-LOGIN-CIK this header's value (if present) will be used. An optional header to use to provide an alternate CIK to use to generate the accession number of the submission. The provided CIK must delegate to the CIK that the Filer API Token belongs to and the User API Token must represent a user that has permission to file for that CIK. This must be a valid CIK and cannot be blank or empty.
+
+Examples: 
+None
+X-EDGAR-CIK
+X-EDGAR-LOGIN-CIK
+string
+(header)
+An optional header to use to provide an alternate CIK to use to generate the accession number of the submission. The provided CIK must delegate to the CIK that the Filer API Token belongs to and the User API Token must represent a user that has permission to file for that CIK. This must be a valid CIK and cannot be blank or empty.
+
+Examples: 
+None
+X-EDGAR-LOGIN-CIK
+Request body
+
+application/octet-stream
+A bulk live submission, in XML format, that will be transmitted to EDGAR and processed.
+
+Examples: 
+Bulk Live Submission
+Example Value
+<?xml version="1.0" ?>
+<bul:edgarBulkSubmission xmlns:bul="http://www.sec.gov/edgar/bulkfiling">
+  <bul:liveTestFlag>LIVE</bul:liveTestFlag>
+  <bul:attachments>
+    <bul:attachment>
+      <bul:submissionName>S-1.xml</bul:submissionName>
+      <bul:contents>PD94bWwgdmVyc2lvbj0iMS4wIiA/Pjxjb3I6ZWRnYXJTdWJtaXNzaW9uIHhtbG5zOmNvcj0iaHR0
+cDovL3d3dy5zZWMuZ292L2VkZ2FyL2NvcmVnZmVlIiB4bWxuczpjb209Imh0dHA6Ly93d3cuc2Vj
+Lmdvdi9lZGdhci9jb21tb24iIHhtbG5zOmZlZWM9Imh0dHA6Ly93d3cuc2VjLmdvdi9lZGdhci9m
+ZWVjb21tb24iPgogIDxjb3I6bGl2ZVRlc3RGbGFnPkxJVkU8L2NvcjpsaXZlVGVzdEZsYWc+CiAg
+PGNvcjpmbGFncz4KICAgIDxjb3I6Y29uZmlybWluZ0NvcHlGbGFnPmZhbHNlPC9jb3I6Y29uZmly
+bWluZ0NvcHlGbGFnPgogICAgPGNvcjpkZWxheWluZ0FtZW5kbWVudEZsYWc+ZmFsc2U8L2Nvcjpk
+ZWxheWluZ0FtZW5kbWVudEZsYWc+CiAgICA8Y29yOm92ZXJyaWRlSW50ZXJuZXRGbGFnPmZhbHNl
+PC9jb3I6b3ZlcnJpZGVJbnRlcm5ldEZsYWc+CiAgICA8Y29yOnJldHVybkNvcHlGbGFnPmZhbHNl
+PC9jb3I6cmV0dXJuQ29weUZsYWc+CiAgPC9jb3I6ZmxhZ3M+CiAgPGNvcjpzdWJtaXNzaW9uVHlw
+ZT5TLTE8L2NvcjpzdWJtaXNzaW9uVHlwZT4KICA8Y29yOmZpbGVyPgogICAgPGNvcjpmaWxlcklk
+PjAzMDE0NTEzMjE8L2NvcjpmaWxlcklkPgogICAgPGNvcjpmaWxlckNjYz4jZWVjYjk4YTwvY29y
+OmZpbGVyQ2NjPgogICAgPGNvcjpmaWxlckZvcm1UeXBlPlMtMTwvY29yOmZpbGVyRm9ybVR5cGU+
+CiAgPC9jb3I6ZmlsZXI+CiAgPGNvcjpzcm9zPgogICAgPGNvbTpzcm9JZD5OT05FPC9jb206c3Jv
+SWQ+CiAgPC9jb3I6c3Jvcz4KICA8Y29yOnNtYWxsQnVzaW5lc3NGbGFnPmZhbHNlPC9jb3I6c21h
+bGxCdXNpbmVzc0ZsYWc+CiAgPGNvcjplbWVyZ2luZ0dyb3d0aENvbXBhbnlGbGFnPmZhbHNlPC9j
+b3I6ZW1lcmdpbmdHcm93dGhDb21wYW55RmxhZz4KICA8Y29yOm5vdGlmaWNhdGlvbnM+CiAgICA8
+Y29tOmludGVybmV0Tm90aWZpY2F0aW9uQWRkcmVzcz5vaGhAc2VjLmdvdjwvY29tOmludGVybmV0
+Tm90aWZpY2F0aW9uQWRkcmVzcz4KICA8L2Nvcjpub3RpZmljYXRpb25zPgogIDxjb3I6ZG9jdW1l
+bnRzPgogICAgPGNvbTpkb2N1bWVudD4KICAgICAgPGNvbTpjb25mb3JtZWROYW1lPmRvYzEudHh0
+PC9jb206Y29uZm9ybWVkTmFtZT4KICAgICAgPGNvbTpjb25mb3JtZWREb2N1bWVudFR5cGU+Uy0x
+PC9jb206Y29uZm9ybWVkRG9jdW1lbnRUeXBlPgogICAgICA8Y29tOmNvbnRlbnRzPktpb3FLaW9x
+S2lvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcUtpb3FEUXBHYVhKemRDQmti
+Mk4xYldWdQpkQTBLRFFvZ0lDQWdJQ0FnSUZOUVJVTkpUVVZPSUMwZ1RrOVVJRUZPSUU5R1JrbERT
+VUZNSUVaSlRFbE9SdzBLRFFvcUtpb3EKS2lvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcUtpb3FL
+aW9xS2lvcUtpb3FLaW9OQ2cwSwo8L2NvbTpjb250ZW50cz4KICAgIDwvY29tOmRvY3VtZW50Pgog
+ICAgPGNvbTpkb2N1bWVudD4KICAgICAgPGNvbTpjb25mb3JtZWROYW1lPmRvYzIudHh0PC9jb206
+Y29uZm9ybWVkTmFtZT4KICAgICAgPGNvbTpjb25mb3JtZWREb2N1bWVudFR5cGU+Q09WRVI8L2Nv
+bTpjb25mb3JtZWREb2N1bWVudFR5cGU+CiAgICAgIDxjb206Y29udGVudHM+S2lvcUtpb3FLaW9x
+S2lvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcURRcEJaSFpoYm1ObFpDQlRi
+MlowCmQyRnlaU0JUZVhOMFpXMXpEUW9nSUNBZ0lDQWdJRk5RUlVOSlRVVk9JQzBnVGs5VUlFRk9J
+RTlHUmtsRFNVRk1JRVpKVEVsTwpSdzBLRFFvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcUtpb3FL
+aW9xS2lvcUtpb3FLaW9xS2lvcUtpb05DZzBLCjwvY29tOmNvbnRlbnRzPgogICAgPC9jb206ZG9j
+dW1lbnQ+CiAgPC9jb3I6ZG9jdW1lbnRzPgogIDxjb3I6ZWRnYXJGZWU+CiAgICA8Y29yOnN1Ym1p
+c3Npb25GZWU+CiAgICAgIDxmZWVjOmZlZVBheW9ySW5mb3JtYXRpb24+CiAgICAgICAgPGZlZWM6
+ZmlsZXJJZD4wMDAxMTI1ODUxPC9mZWVjOmZpbGVySWQ+CiAgICAgICAgPGZlZWM6ZmlsZXJDY2M+
+I3RlY2gxMjM8L2ZlZWM6ZmlsZXJDY2M+CiAgICAgIDwvZmVlYzpmZWVQYXlvckluZm9ybWF0aW9u
+PgogICAgICA8ZmVlYzpmZWVQYXltZW50TWV0aG9kPkZFRFdJUkU8L2ZlZWM6ZmVlUGF5bWVudE1l
+dGhvZD4KICAgICAgPGZlZWM6ZmVlQW1vdW50PjE0LjQwPC9mZWVjOmZlZUFtb3VudD4KICAgIDwv
+Y29yOnN1Ym1pc3Npb25GZWU+CiAgICA8Y29yOnN1Ym1pc3Npb25PZmZlcmluZz4KICAgICAgPGZl
+ZWM6ZmVlT2ZmZXJpbmdTZWN1cml0eU5hbWU+RGVidDwvZmVlYzpmZWVPZmZlcmluZ1NlY3VyaXR5
+TmFtZT4KICAgICAgPGZlZWM6ZmVlT2ZmZXJpbmdTaGFyZXM+MTEwMTwvZmVlYzpmZWVPZmZlcmlu
+Z1NoYXJlcz4KICAgICAgPGZlZWM6ZmVlT2ZmZXJpbmdBbW91bnRQZXJTaGFyZT4xMDAwLjAwMDA8
+L2ZlZWM6ZmVlT2ZmZXJpbmdBbW91bnRQZXJTaGFyZT4KICAgICAgPGZlZWM6ZmVlT2ZmZXJpbmdB
+Z2dyZWdhdGVQcmljZT4xMTAxMDIuMzY8L2ZlZWM6ZmVlT2ZmZXJpbmdBZ2dyZWdhdGVQcmljZT4K
+ICAgIDwvY29yOnN1Ym1pc3Npb25PZmZlcmluZz4KICA8L2NvcjplZGdhckZlZT4KPC9jb3I6ZWRn
+YXJTdWJtaXNzaW9uPg==
+</bul:contents>
+    </bul:attachment>
+    <bul:attachment>
+      <bul:submissionName>8-K.xml</bul:submissionName>
+      <bul:contents>PD94bWwgdmVyc2lvbj0iMS4wIiA/Pjxjb3I6ZWRnYXJTdWJtaXNzaW9uIHhtbG5zOmNvcj0iaHR0
+cDovL3d3dy5zZWMuZ292L2VkZ2FyL2NvcmVnIiB4bWxuczpjb209Imh0dHA6Ly93d3cuc2VjLmdv
+di9lZGdhci9jb21tb24iPgogIDxjb3I6bGl2ZVRlc3RGbGFnPkxJVkU8L2NvcjpsaXZlVGVzdEZs
+YWc+CiAgPGNvcjpmbGFncz4KICAgIDxjb206Y29uZmlybWluZ0NvcHlGbGFnPmZhbHNlPC9jb206
+Y29uZmlybWluZ0NvcHlGbGFnPgogICAgPGNvbTpvdmVycmlkZUludGVybmV0RmxhZz5mYWxzZTwv
+Y29tOm92ZXJyaWRlSW50ZXJuZXRGbGFnPgogICAgPGNvbTpyZXR1cm5Db3B5RmxhZz5mYWxzZTwv
+Y29tOnJldHVybkNvcHlGbGFnPgogIDwvY29yOmZsYWdzPgogIDxjb3I6c3VibWlzc2lvblR5cGU+
+OC1LPC9jb3I6c3VibWlzc2lvblR5cGU+CiAgPGNvcjpmaWxlcj4KICAgIDxjb3I6ZmlsZXJJZD4w
+MzAxNzIyODQ4PC9jb3I6ZmlsZXJJZD4KICAgIDxjb3I6ZmlsZXJDY2M+YmNjOW9lI2U8L2Nvcjpm
+aWxlckNjYz4KICA8L2NvcjpmaWxlcj4KICA8Y29yOnNyb3M+CiAgICA8Y29tOnNyb0lkPk5PTkU8
+L2NvbTpzcm9JZD4KICA8L2Nvcjpzcm9zPgogIDxjb3I6aXRlbXM+CiAgICA8Y29yOml0ZW0+MS4w
+MTwvY29yOml0ZW0+CiAgPC9jb3I6aXRlbXM+CiAgPGNvcjplbWVyZ2luZ0dyb3d0aENvbXBhbnlG
+bGFnPnRydWU8L2NvcjplbWVyZ2luZ0dyb3d0aENvbXBhbnlGbGFnPgogIDxjb3I6ZG9jdW1lbnRz
+PgogICAgPGNvbTpkb2N1bWVudD4KICAgICAgPGNvbTpjb25mb3JtZWROYW1lPmZpbGUudHh0PC9j
+b206Y29uZm9ybWVkTmFtZT4KICAgICAgPGNvbTpjb25mb3JtZWREb2N1bWVudFR5cGU+OC1LPC9j
+b206Y29uZm9ybWVkRG9jdW1lbnRUeXBlPgogICAgICA8Y29tOmNvbnRlbnRzPmRHVnpkQT09PC9j
+b206Y29udGVudHM+CiAgICA8L2NvbTpkb2N1bWVudD4KICA8L2Nvcjpkb2N1bWVudHM+CjwvY29y
+OmVkZ2FyU3VibWlzc2lvbj4=
+</bul:contents>
+    </bul:attachment>
+  </bul:attachments>
+</bul:edgarBulkSubmission>
+Example Description
+A valid bulk live submission
+
+
+Responses
+Code	Description	Links
+202	
+Accepted. The filing has been transmitted to the BULK TEST resource and the EDGAR system has generated accession number(s) for each contained filing. The submission(s) have begun processing.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+Accepted. The BULK TEST filing has been transmitted to EDGAR and accession number(s) generated
+Example Value
+Schema
+{
+  "tracking": "8bdd9ff5f82da173d41bf1ed03a80af4",
+  "locator": "47a94d",
+  "status": "RECEIVED",
+  "responses": [
+    {
+      "accessionNumber": "0000000000-22-000001",
+      "type": "LIVE",
+      "messages": []
+    },
+    {
+      "accessionNumber": "0000000000-22-000006",
+      "type": "LIVE",
+      "messages": []
+    }
+  ]
+}
+Example Description
+Accepted. The filing has been transmitted to the BULK TEST resource and the EDGAR system has generated accession number(s) for each contained filing. The submission(s) have begun processing.
+
+
+No links
+400	
+Bad request
+
+Media type
+
+application/json
+Examples
+
+Blank/Empty CIK for X-EDGAR-LOGIN-CIK
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "If the header X-EDGAR-LOGIN-CIK (or X-EDGAR-CIK) is provided it must not be blank or empty."
+    }
+  ]
+}
+Example Description
+If the header X-EDGAR-LOGIN-CIK (or X-EDGAR-CIK) is provided it must not be blank or empty.
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to file (1) for the CIK associated with the Filer API Token and (2) for any CIKs for which filings are being submitted.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The Filer API Token and User API Token are present and valid but do not provide required permissions to use this resource. Check delegation and permissions in Filer Management.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Server Error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+503	
+A request was made to this resource outside of operational hours.
+
+Media type
+
+application/json
+Examples
+
+Out of Operational Hours
+Example Value
+Schema
+{
+  "tracking": "44230c24bc6ce1b884cc5b739819d29942",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "EDGAR is not available because EDGAR is reporting that it is not within operating hours."
+    }
+  ]
+}
+Example Description
+A request was made to this resource outside of the windows of operation for the EDGAR system and this request could not be completed. This status is also returned when the operational status of EDGAR cannot be determined.
+
+
+No links
+
+POST
+/submission/bulk/test
+Bulk Test Submission
+
+
+Description
+Allows an authorized filer to transmit a BULK TEST submission file. When an authorized filer transmits a filing to this resource it will transmit the file to EDGAR and return a list of accession numbers. EDGAR will then begin processing the submissions.
+
+Endpoint
+https://api.edgarfiling.sec.gov/submission/bulk/test
+
+Parameters
+Try it out
+Name	Description
+X-EDGAR-CIK
+string
+deprecated
+(header)
+DEPRECATED in favor of X-EDGAR-LOGIN-CIK. If a value is sent in X-EDGAR-LOGIN-CIK this header will be ignored. If no header value is sent in X-EDGAR-LOGIN-CIK this header's value (if present) will be used. An optional header to use to provide an alternate CIK to use to generate the accession number of the submission. The provided CIK must delegate to the CIK that the Filer API Token belongs to and the User API Token must represent a user that has permission to file for that CIK. This must be a valid CIK and cannot be blank or empty.
+
+Examples: 
+None
+X-EDGAR-CIK
+X-EDGAR-LOGIN-CIK
+string
+(header)
+An optional header to use to provide an alternate CIK to use to generate the accession number of the submission. The provided CIK must delegate to the CIK that the Filer API Token belongs to and the User API Token must represent a user that has permission to file for that CIK. This must be a valid CIK and cannot be blank or empty.
+
+Examples: 
+None
+X-EDGAR-LOGIN-CIK
+Request body
+
+application/octet-stream
+A bulk test filing, in XML format, that will be transmitted to EDGAR and processed.
+
+Examples: 
+Bulk Test Submission
+Example Value
+<?xml version="1.0" ?>
+<bul:edgarBulkSubmission xmlns:bul="http://www.sec.gov/edgar/bulkfiling">
+  <bul:liveTestFlag>TEST</bul:liveTestFlag>
+  <bul:attachments>
+    <bul:attachment>
+      <bul:submissionName>S-1.xml</bul:submissionName>
+      <bul:contents>PD94bWwgdmVyc2lvbj0iMS4wIiA/Pjxjb3I6ZWRnYXJTdWJtaXNzaW9uIHhtbG5zOmNvcj0iaHR0
+cDovL3d3dy5zZWMuZ292L2VkZ2FyL2NvcmVnZmVlIiB4bWxuczpjb209Imh0dHA6Ly93d3cuc2Vj
+Lmdvdi9lZGdhci9jb21tb24iIHhtbG5zOmZlZWM9Imh0dHA6Ly93d3cuc2VjLmdvdi9lZGdhci9m
+ZWVjb21tb24iPgogIDxjb3I6bGl2ZVRlc3RGbGFnPlRFU1Q8L2NvcjpsaXZlVGVzdEZsYWc+CiAg
+PGNvcjpmbGFncz4KICAgIDxjb3I6Y29uZmlybWluZ0NvcHlGbGFnPmZhbHNlPC9jb3I6Y29uZmly
+bWluZ0NvcHlGbGFnPgogICAgPGNvcjpkZWxheWluZ0FtZW5kbWVudEZsYWc+ZmFsc2U8L2Nvcjpk
+ZWxheWluZ0FtZW5kbWVudEZsYWc+CiAgICA8Y29yOm92ZXJyaWRlSW50ZXJuZXRGbGFnPmZhbHNl
+PC9jb3I6b3ZlcnJpZGVJbnRlcm5ldEZsYWc+CiAgICA8Y29yOnJldHVybkNvcHlGbGFnPmZhbHNl
+PC9jb3I6cmV0dXJuQ29weUZsYWc+CiAgPC9jb3I6ZmxhZ3M+CiAgPGNvcjpzdWJtaXNzaW9uVHlw
+ZT5TLTE8L2NvcjpzdWJtaXNzaW9uVHlwZT4KICA8Y29yOmZpbGVyPgogICAgPGNvcjpmaWxlcklk
+PjAzMDE0NTEzMjE8L2NvcjpmaWxlcklkPgogICAgPGNvcjpmaWxlckNjYz4jZWVjYjk4YTwvY29y
+OmZpbGVyQ2NjPgogICAgPGNvcjpmaWxlckZvcm1UeXBlPlMtMTwvY29yOmZpbGVyRm9ybVR5cGU+
+CiAgPC9jb3I6ZmlsZXI+CiAgPGNvcjpzcm9zPgogICAgPGNvbTpzcm9JZD5OT05FPC9jb206c3Jv
+SWQ+CiAgPC9jb3I6c3Jvcz4KICA8Y29yOnNtYWxsQnVzaW5lc3NGbGFnPmZhbHNlPC9jb3I6c21h
+bGxCdXNpbmVzc0ZsYWc+CiAgPGNvcjplbWVyZ2luZ0dyb3d0aENvbXBhbnlGbGFnPmZhbHNlPC9j
+b3I6ZW1lcmdpbmdHcm93dGhDb21wYW55RmxhZz4KICA8Y29yOm5vdGlmaWNhdGlvbnM+CiAgICA8
+Y29tOmludGVybmV0Tm90aWZpY2F0aW9uQWRkcmVzcz5vaGhAc2VjLmdvdjwvY29tOmludGVybmV0
+Tm90aWZpY2F0aW9uQWRkcmVzcz4KICA8L2Nvcjpub3RpZmljYXRpb25zPgogIDxjb3I6ZG9jdW1l
+bnRzPgogICAgPGNvbTpkb2N1bWVudD4KICAgICAgPGNvbTpjb25mb3JtZWROYW1lPmRvYzEudHh0
+PC9jb206Y29uZm9ybWVkTmFtZT4KICAgICAgPGNvbTpjb25mb3JtZWREb2N1bWVudFR5cGU+Uy0x
+PC9jb206Y29uZm9ybWVkRG9jdW1lbnRUeXBlPgogICAgICA8Y29tOmNvbnRlbnRzPktpb3FLaW9x
+S2lvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcUtpb3FEUXBHYVhKemRDQmti
+Mk4xYldWdQpkQTBLRFFvZ0lDQWdJQ0FnSUZOUVJVTkpUVVZPSUMwZ1RrOVVJRUZPSUU5R1JrbERT
+VUZNSUVaSlRFbE9SdzBLRFFvcUtpb3EKS2lvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcUtpb3FL
+aW9xS2lvcUtpb3FLaW9OQ2cwSwo8L2NvbTpjb250ZW50cz4KICAgIDwvY29tOmRvY3VtZW50Pgog
+ICAgPGNvbTpkb2N1bWVudD4KICAgICAgPGNvbTpjb25mb3JtZWROYW1lPmRvYzIudHh0PC9jb206
+Y29uZm9ybWVkTmFtZT4KICAgICAgPGNvbTpjb25mb3JtZWREb2N1bWVudFR5cGU+Q09WRVI8L2Nv
+bTpjb25mb3JtZWREb2N1bWVudFR5cGU+CiAgICAgIDxjb206Y29udGVudHM+S2lvcUtpb3FLaW9x
+S2lvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcURRcEJaSFpoYm1ObFpDQlRi
+MlowCmQyRnlaU0JUZVhOMFpXMXpEUW9nSUNBZ0lDQWdJRk5RUlVOSlRVVk9JQzBnVGs5VUlFRk9J
+RTlHUmtsRFNVRk1JRVpKVEVsTwpSdzBLRFFvcUtpb3FLaW9xS2lvcUtpb3FLaW9xS2lvcUtpb3FL
+aW9xS2lvcUtpb3FLaW9xS2lvcUtpb05DZzBLCjwvY29tOmNvbnRlbnRzPgogICAgPC9jb206ZG9j
+dW1lbnQ+CiAgPC9jb3I6ZG9jdW1lbnRzPgogIDxjb3I6ZWRnYXJGZWU+CiAgICA8Y29yOnN1Ym1p
+c3Npb25GZWU+CiAgICAgIDxmZWVjOmZlZVBheW9ySW5mb3JtYXRpb24+CiAgICAgICAgPGZlZWM6
+ZmlsZXJJZD4wMDAxMTI1ODUxPC9mZWVjOmZpbGVySWQ+CiAgICAgICAgPGZlZWM6ZmlsZXJDY2M+
+I3RlY2gxMjM8L2ZlZWM6ZmlsZXJDY2M+CiAgICAgIDwvZmVlYzpmZWVQYXlvckluZm9ybWF0aW9u
+PgogICAgICA8ZmVlYzpmZWVQYXltZW50TWV0aG9kPkZFRFdJUkU8L2ZlZWM6ZmVlUGF5bWVudE1l
+dGhvZD4KICAgICAgPGZlZWM6ZmVlQW1vdW50PjE0LjQwPC9mZWVjOmZlZUFtb3VudD4KICAgIDwv
+Y29yOnN1Ym1pc3Npb25GZWU+CiAgICA8Y29yOnN1Ym1pc3Npb25PZmZlcmluZz4KICAgICAgPGZl
+ZWM6ZmVlT2ZmZXJpbmdTZWN1cml0eU5hbWU+RGVidDwvZmVlYzpmZWVPZmZlcmluZ1NlY3VyaXR5
+TmFtZT4KICAgICAgPGZlZWM6ZmVlT2ZmZXJpbmdTaGFyZXM+MTEwMTwvZmVlYzpmZWVPZmZlcmlu
+Z1NoYXJlcz4KICAgICAgPGZlZWM6ZmVlT2ZmZXJpbmdBbW91bnRQZXJTaGFyZT4xMDAwLjAwMDA8
+L2ZlZWM6ZmVlT2ZmZXJpbmdBbW91bnRQZXJTaGFyZT4KICAgICAgPGZlZWM6ZmVlT2ZmZXJpbmdB
+Z2dyZWdhdGVQcmljZT4xMTAxMDIuMzY8L2ZlZWM6ZmVlT2ZmZXJpbmdBZ2dyZWdhdGVQcmljZT4K
+ICAgIDwvY29yOnN1Ym1pc3Npb25PZmZlcmluZz4KICA8L2NvcjplZGdhckZlZT4KPC9jb3I6ZWRn
+YXJTdWJtaXNzaW9uPg==
+</bul:contents>
+    </bul:attachment>
+    <bul:attachment>
+      <bul:submissionName>8-K.xml</bul:submissionName>
+      <bul:contents>PD94bWwgdmVyc2lvbj0iMS4wIiA/Pjxjb3I6ZWRnYXJTdWJtaXNzaW9uIHhtbG5zOmNvcj0iaHR0
+cDovL3d3dy5zZWMuZ292L2VkZ2FyL2NvcmVnIiB4bWxuczpjb209Imh0dHA6Ly93d3cuc2VjLmdv
+di9lZGdhci9jb21tb24iPgogIDxjb3I6bGl2ZVRlc3RGbGFnPlRFU1Q8L2NvcjpsaXZlVGVzdEZs
+YWc+CiAgPGNvcjpmbGFncz4KICAgIDxjb206Y29uZmlybWluZ0NvcHlGbGFnPmZhbHNlPC9jb206
+Y29uZmlybWluZ0NvcHlGbGFnPgogICAgPGNvbTpvdmVycmlkZUludGVybmV0RmxhZz5mYWxzZTwv
+Y29tOm92ZXJyaWRlSW50ZXJuZXRGbGFnPgogICAgPGNvbTpyZXR1cm5Db3B5RmxhZz5mYWxzZTwv
+Y29tOnJldHVybkNvcHlGbGFnPgogIDwvY29yOmZsYWdzPgogIDxjb3I6c3VibWlzc2lvblR5cGU+
+OC1LPC9jb3I6c3VibWlzc2lvblR5cGU+CiAgPGNvcjpmaWxlcj4KICAgIDxjb3I6ZmlsZXJJZD4w
+MzAxNzIyODQ4PC9jb3I6ZmlsZXJJZD4KICAgIDxjb3I6ZmlsZXJDY2M+YmNjOW9lI2U8L2Nvcjpm
+aWxlckNjYz4KICA8L2NvcjpmaWxlcj4KICA8Y29yOnNyb3M+CiAgICA8Y29tOnNyb0lkPk5PTkU8
+L2NvbTpzcm9JZD4KICA8L2Nvcjpzcm9zPgogIDxjb3I6aXRlbXM+CiAgICA8Y29yOml0ZW0+MS4w
+MTwvY29yOml0ZW0+CiAgPC9jb3I6aXRlbXM+CiAgPGNvcjplbWVyZ2luZ0dyb3d0aENvbXBhbnlG
+bGFnPnRydWU8L2NvcjplbWVyZ2luZ0dyb3d0aENvbXBhbnlGbGFnPgogIDxjb3I6ZG9jdW1lbnRz
+PgogICAgPGNvbTpkb2N1bWVudD4KICAgICAgPGNvbTpjb25mb3JtZWROYW1lPmZpbGUudHh0PC9j
+b206Y29uZm9ybWVkTmFtZT4KICAgICAgPGNvbTpjb25mb3JtZWREb2N1bWVudFR5cGU+OC1LPC9j
+b206Y29uZm9ybWVkRG9jdW1lbnRUeXBlPgogICAgICA8Y29tOmNvbnRlbnRzPmRHVnpkQT09PC9j
+b206Y29udGVudHM+CiAgICA8L2NvbTpkb2N1bWVudD4KICA8L2Nvcjpkb2N1bWVudHM+CjwvY29y
+OmVkZ2FyU3VibWlzc2lvbj4=
+</bul:contents>
+    </bul:attachment>
+  </bul:attachments>
+</bul:edgarBulkSubmission>
+Example Description
+A valid bulk test filing
+
+
+Responses
+Code	Description	Links
+202	
+Accepted. The filing has been transmitted to the BULK TEST resource and the EDGAR system has generated accession number(s) for each contained filing. The submission(s) have begun processing.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+Accepted. The BULK TEST filing has been transmitted to EDGAR and accession number(s) generated
+Example Value
+Schema
+{
+  "tracking": "8bdd9ff5f82da173d41bf1ed03a80af4",
+  "locator": "47a94d",
+  "responses": [
+    {
+      "accessionNumber": "0000000000-22-000001",
+      "type": "TEST",
+      "messages": []
+    },
+    {
+      "accessionNumber": "0000000000-22-000009",
+      "type": "TEST",
+      "messages": []
+    }
+  ]
+}
+Example Description
+Accepted. The filing has been transmitted to the BULK TEST resource and the EDGAR system has generated accession number(s) for each contained filing. The submission(s) have begun processing.
+
+
+No links
+400	
+Bad request
+
+Media type
+
+application/json
+Examples
+
+Blank/Empty CIK for X-EDGAR-LOGIN-CIK
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "If the header X-EDGAR-LOGIN-CIK (or X-EDGAR-CIK) is provided it must not be blank or empty."
+    }
+  ]
+}
+Example Description
+If the header X-EDGAR-LOGIN-CIK (or X-EDGAR-CIK) is provided it must not be blank or empty.
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to file (1) for the CIK associated with the Filer API Token and (2) for any CIKs for which filings are being submitted.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+Forbidden
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Server Error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+503	
+A request was made to this resource outside of operational hours.
+
+Media type
+
+application/json
+Examples
+
+Out of Operational Hours
+Example Value
+Schema
+{
+  "tracking": "44230c24bc6ce1b884cc5b739819d29942",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "EDGAR is not available because EDGAR is reporting that it is not within operating hours."
+    }
+  ]
+}
+Example Description
+A request was made to this resource outside of the windows of operation for the EDGAR system and this request could not be completed. This status is also returned when the operational status of EDGAR cannot be determined.
+
+
+No links
+
+POST
+/submission/single/live
+Single Live Submission
+
+
+Description
+Allows an authorized filer to transmit a SINGLE LIVE submission file. When an authorized filer transmits a filing to this resource it will transmit the file to EDGAR and return an accession number. EDGAR will then begin processing the submission.
+
+Endpoint
+https://api.edgarfiling.sec.gov/submission/single/live
+
+Parameters
+Try it out
+Name	Description
+X-EDGAR-CIK
+string
+deprecated
+(header)
+DEPRECATED in favor of X-EDGAR-LOGIN-CIK. If a value is sent in X-EDGAR-LOGIN-CIK this header will be ignored. If no header value is sent in X-EDGAR-LOGIN-CIK this header's value (if present) will be used. An optional header to use to provide an alternate CIK to use to generate the accession number of the submission. The provided CIK must delegate to the CIK that the Filer API Token belongs to and the User API Token must represent a user that has permission to file for that CIK. This must be a valid CIK and cannot be blank or empty.
+
+Examples: 
+None
+X-EDGAR-CIK
+X-EDGAR-LOGIN-CIK
+string
+(header)
+An optional header to use to provide an alternate CIK to use to generate the accession number of the submission. The provided CIK must delegate to the CIK that the Filer API Token belongs to and the User API Token must represent a user that has permission to file for that CIK. This must be a valid CIK and cannot be blank or empty.
+
+Examples: 
+None
+X-EDGAR-LOGIN-CIK
+Request body
+
+application/octet-stream
+A single live submission, in XML format, that will be transmitted to EDGAR and processed.
+
+Examples: 
+Single Live Submission (8-K)
+Example Value
+<?xml version="1.0" ?>
+<cor:edgarSubmission xmlns:cor="http://www.sec.gov/edgar/coreg" xmlns:com="http://www.sec.gov/edgar/common">
+  <cor:liveTestFlag>LIVE</cor:liveTestFlag>
+  <cor:flags>
+    <com:confirmingCopyFlag>false</com:confirmingCopyFlag>
+    <com:overrideInternetFlag>false</com:overrideInternetFlag>
+    <com:returnCopyFlag>false</com:returnCopyFlag>
+  </cor:flags>
+  <cor:submissionType>8-K</cor:submissionType>
+  <cor:filer>
+    <cor:filerId>1821451321</cor:filerId>
+    <cor:filerCcc>#decb44a</cor:filerCcc>
+  </cor:filer>
+  <cor:sros>
+    <com:sroId>NONE</com:sroId>
+  </cor:sros>
+  <cor:items>
+    <cor:item>1.01</cor:item>
+  </cor:items>
+  <cor:emergingGrowthCompanyFlag>true</cor:emergingGrowthCompanyFlag>
+  <cor:documents>
+    <com:document>
+      <com:conformedName>file.txt</com:conformedName>
+      <com:conformedDocumentType>8-K</com:conformedDocumentType>
+      <com:contents>dGVzdA==</com:contents>
+    </com:document>
+  </cor:documents>
+</cor:edgarSubmission>
+Example Description
+A valid single live 8-K submission
+
+
+Responses
+Code	Description	Links
+202	
+Accepted. The filing has been transmitted to the SINGLE LIVE resource and the EDGAR system has generated an accession number. The submission has begun processing.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+Accepted. The SINGLE LIVE filing has been transmitted to EDGAR and accession number(s) generated
+Example Value
+Schema
+{
+  "tracking": "820c24bc6ce9ce84cc5b739819d27742",
+  "locator": "47a94d",
+  "accessionNumber": "0000000000-22-000001",
+  "type": "LIVE",
+  "messages": []
+}
+Example Description
+Accepted. The filing has been transmitted to the SINGLE LIVE resource and the EDGAR system has generated an accession number. The submission has begun processing.
+
+
+No links
+400	
+Bad request
+
+Media type
+
+application/json
+Examples
+
+Blank/Empty CIK for X-EDGAR-LOGIN-CIK
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "If the header X-EDGAR-LOGIN-CIK (or X-EDGAR-CIK) is provided it must not be blank or empty."
+    }
+  ]
+}
+Example Description
+If the header X-EDGAR-LOGIN-CIK (or X-EDGAR-CIK) is provided it must not be blank or empty.
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to file (1) for the CIK associated with the Filer API Token and (2) for any CIKs for which filings are being submitted.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The Filer API Token and User API Token are present and valid but do not provide required permissions to use this resource. Check delegation and permissions in Filer Management.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Server Error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+503	
+A request was made to this resource outside of operational hours.
+
+Media type
+
+application/json
+Examples
+
+Out of Operational Hours
+Example Value
+Schema
+{
+  "tracking": "44230c24bc6ce1b884cc5b739819d29942",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "EDGAR is not available because EDGAR is reporting that it is not within operating hours."
+    }
+  ]
+}
+Example Description
+A request was made to this resource outside of the windows of operation for the EDGAR system and this request could not be completed. This status is also returned when the operational status of EDGAR cannot be determined.
+
+
+No links
+
+POST
+/submission/single/test
+Single Test Submission
+
+
+Description
+Allows an authorized filer to transmit a SINGLE TEST submission file. When an authorized filer transmits a filing to this resource it will transmit the file to EDGAR and return an accession number. EDGAR will then begin processing the submission.
+
+Endpoint
+https://api.edgarfiling.sec.gov/submission/single/test
+
+Parameters
+Try it out
+Name	Description
+X-EDGAR-CIK
+string
+deprecated
+(header)
+DEPRECATED in favor of X-EDGAR-LOGIN-CIK. If a value is sent in X-EDGAR-LOGIN-CIK this header will be ignored. If no header value is sent in X-EDGAR-LOGIN-CIK this header's value (if present) will be used. An optional header to use to provide an alternate CIK to use to generate the accession number of the submission. The provided CIK must delegate to the CIK that the Filer API Token belongs to and the User API Token must represent a user that has permission to file for that CIK. This must be a valid CIK and cannot be blank or empty.
+
+Examples: 
+None
+X-EDGAR-CIK
+X-EDGAR-LOGIN-CIK
+string
+(header)
+An optional header to use to provide an alternate CIK to use to generate the accession number of the submission. The provided CIK must delegate to the CIK that the Filer API Token belongs to and the User API Token must represent a user that has permission to file for that CIK. This must be a valid CIK and cannot be blank or empty.
+
+Examples: 
+None
+X-EDGAR-LOGIN-CIK
+Request body
+
+application/octet-stream
+A single test submission, in XML format, that will be transmitted to EDGAR and processed.
+
+Examples: 
+Single Test Submission (8-K)
+Example Value
+<?xml version="1.0" ?>
+<cor:edgarSubmission xmlns:cor="http://www.sec.gov/edgar/coreg" xmlns:com="http://www.sec.gov/edgar/common">
+  <cor:liveTestFlag>TEST</cor:liveTestFlag>
+  <cor:flags>
+    <com:confirmingCopyFlag>false</com:confirmingCopyFlag>
+    <com:overrideInternetFlag>false</com:overrideInternetFlag>
+    <com:returnCopyFlag>false</com:returnCopyFlag>
+  </cor:flags>
+  <cor:submissionType>8-K</cor:submissionType>
+  <cor:filer>
+    <cor:filerId>1821451321</cor:filerId>
+    <cor:filerCcc>#decb44a</cor:filerCcc>
+  </cor:filer>
+  <cor:sros>
+    <com:sroId>NONE</com:sroId>
+  </cor:sros>
+  <cor:items>
+    <cor:item>1.01</cor:item>
+  </cor:items>
+  <cor:emergingGrowthCompanyFlag>true</cor:emergingGrowthCompanyFlag>
+  <cor:documents>
+    <com:document>
+      <com:conformedName>file.txt</com:conformedName>
+      <com:conformedDocumentType>8-K</com:conformedDocumentType>
+      <com:contents>dGVzdA==</com:contents>
+    </com:document>
+  </cor:documents>
+</cor:edgarSubmission>
+Example Description
+A valid single test 8-K submission
+
+
+Responses
+Code	Description	Links
+202	
+Accepted. The filing has been transmitted to the SINGLE TEST resource and the EDGAR system has generated an accession number. The submission has begun processing.
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+Accepted. The SINGLE TEST filing has been transmitted to EDGAR and accession number(s) generated
+Example Value
+Schema
+{
+  "tracking": "66ff8850f952de766df03a21da71fe69",
+  "locator": "47a94d",
+  "accessionNumber": "0000000000-25-000001",
+  "mode": "TEST",
+  "status": "RECEIVED",
+  "transmissionStatus": "RECEIVED"
+}
+Example Description
+Accepted. The filing has been transmitted to the SINGLE TEST resource and the EDGAR system has generated an accession number. The submission has begun processing.
+
+
+No links
+400	
+Bad request
+
+Media type
+
+application/json
+Examples
+
+Blank/Empty CIK for X-EDGAR-LOGIN-CIK
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "If the header X-EDGAR-LOGIN-CIK (or X-EDGAR-CIK) is provided it must not be blank or empty."
+    }
+  ]
+}
+Example Description
+If the header X-EDGAR-LOGIN-CIK (or X-EDGAR-CIK) is provided it must not be blank or empty.
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. A valid Filer API Token and User Access Token must be provided with this request. Please ensure that the User identified by the User Access Token is authorized to file (1) for the CIK associated with the Filer API Token and (2) for any CIKs for which filings are being submitted.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The Filer API Token and User API Token are present and valid but do not provide required permissions to use this resource. Check delegation and permissions in Filer Management.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Server Error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+503	
+A request was made to this resource outside of operational hours.
+
+Media type
+
+application/json
+Examples
+
+Out of Operational Hours
+Example Value
+Schema
+{
+  "tracking": "44230c24bc6ce1b884cc5b739819d29942",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "EDGAR is not available because EDGAR is reporting that it is not within operating hours."
+    }
+  ]
+}
+Example Description
+A request was made to this resource outside of the windows of operation for the EDGAR system and this request could not be completed. This status is also returned when the operational status of EDGAR cannot be determined.
+
+
+No links
+Submission Status API
+The Submission Status API provides information from the EDGAR system. It requires a Filer API Token and accession number(s). To obtain information about a submission through the Submission Status API, you must use a Filer API Token that belongs to the CIK that submitted the filing or the CIK that was the filer for the submission. The Submission Status API will only return the detailed information about the filling (like error codes or the filer notification text) once the filing has reached the end of processing signified by the field 'final' being set to true.
+
+The statuses of filings are retained for limited amounts of time. The statuses of Accepted TEST filings are retained for two (2) days, Accepted LIVE filings are retained for sixty (60) days, and Suspended filings, regardless of type, are retained for six (6) days.
+
+
+POST
+/submission/status
+Check Multiple Submission Statuses
+
+
+Description
+When an authorized filer requests the status of multiple submissions that the filer made, the Check Multiple Submission Statuses API will respond with the current status of each, if available.
+
+Endpoint
+https://api.edgarfiling.sec.gov/submission/status
+
+Parameters
+Try it out
+No parameters
+
+Request body
+
+application/json
+A list of accession numbers as strings that the authorized filer is requesting status for. Please note that the maximum number of accession numbers that can be included in a single request is 25.
+
+Examples: 
+A request for a single accession number, in a list
+Example Value
+Schema
+{
+  "accessionNumbers": [
+    "0000000000-22-000000"
+  ]
+}
+Example Description
+A request for a single accession number, in a list
+
+
+Responses
+Code	Description	Links
+200	
+Ok. A submission filed by the authorized filer, with at least one of the given accession numbers, was found
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+A list of statuses showing a status for each accession number requested.
+Example Value
+Schema
+{
+  "tracking": "5e981101d4bfdee09b95c6f1d53e8551",
+  "locator": "l33922",
+  "responses": [
+    {
+      "accessionNumber": "0000000000-22-000004",
+      "status": "DONE",
+      "final": true,
+      "mode": "LIVE",
+      "company": "TEST COMPANY",
+      "documentCount": "1",
+      "submissionType": "8-K",
+      "receivedDate": "2024-08-01T19:20:12.743Z",
+      "acceptedDate": "2024-10-03T13:11:35.732Z",
+      "filingDate": "2024-10-03T13:12:42.461Z",
+      "notification": "U3ViamVjdDogQUNDRVBURUQgRk9STSBUWVBFIDgtSyAoMDAwMDAwMDAwMC0yMi0wMDAwMDQpCkRhdGU6IDAzLU9jdC0yMDI0IDA5OjExCgpUSEUgRk9MTE9XSU5HIFNVQk1JU1NJT04gSEFTIEJFRU4gQUNDRVBURUQgQlkgVEhFIFUuUy4gU0VDVVJJVElFUyBBTkQgRVhDSEFOR0UgCkNPTU1JU1NJT04uCgoKRk9STSBUWVBFOiAgICAgOC1LICAgICAgICBOVU1CRVIgT0YgRE9DVU1FTlRTOiAxClJFQ0VJVkVEIERBVEU6IDAxLUF1Zy0yMDI0IDE1OjIwICAgIEFDQ0VQVEVEIERBVEU6ICAgICAgIDAzLU9jdC0yMDI0IDA5OjExClRFU1QgRklMSU5HOiAgIE5PICAgICAgICAgICAgICAgICAgIENPTkZJUk1JTkcgQ09QWTogICAgIE5PCgpBQ0NFU1NJT04gTlVNQkVSOiAwMDAwMDAwMDAwLTIyLTAwMDAwNAoKUExFQVNFIFJFRkVSIFRPIFRIRSBBQ0NFU1NJT04gTlVNQkVSIExJU1RFRCBBQk9WRSBGT1IgRlVUVVJFIElOUVVJUklFUy4KClRoZSBFREdBUiBzeXN0ZW0gaXMgYXZhaWxhYmxlIHRvIHJlY2VpdmUgYW5kIHByb2Nlc3MgZmlsaW5ncyBmcm9tIAo2OjAwIGEubS4gdG8gMTA6MDAgcC5tLiBFYXN0ZXJuIFRpbWUgb24gYnVzaW5lc3MgZGF5cy4gRmlsZXIgU3VwcG9ydApzdGFmZiBtZW1iZXJzIGFyZSBhdmFpbGFibGUgdG8gcmVzcG9uZCB0byByZXF1ZXN0cyBmb3IgYXNzaXN0YW5jZSBmcm9tCjk6MDAgYS5tLiB0byA1OjMwIHAubS4gRWFzdGVybiBUaW1lLiAKCldlIGVuY291cmFnZSB5b3UgdG8gdmlzaXQgdGhlIEVER0FSIC0gSW5mb3JtYXRpb24gZm9yIEZpbGVycyB3ZWJwYWdlIGF0IApTRUMuZ292IHwgRURHQVIgLSBJbmZvcm1hdGlvbiBmb3IgRmlsZXJzIFtodHRwczovL3d3dy5zZWMuZ292L2VkZ2FyL2ZpbGVyLWluZm9ybWF0aW9uIF0uIApPbiB0aGlzIHdlYnBhZ2UgeW91IGNhbiB2aWV3IGFuZC9vciBkb3dubG9hZCB0aGUgRURHQVIgRmlsZXIgTWFudWFsLCBhY2Nlc3MgSG93IApEbyBJJ3MsIGFuZCBhbHNvIGdldCBhY2Nlc3MgdG8gcmVzb3VyY2VzIGFuZCBhbm5vdW5jZW1lbnRzLg==",
+      "items": [],
+      "submissionMessages": [],
+      "fileNumbers": [],
+      "registrants": [
+        {
+          "cik": "0000000000",
+          "company": "TEST COMPANY",
+          "formType": "8-K",
+          "fileNumbers": []
+        }
+      ],
+      "messages": [
+        {
+          "type": "WARNING",
+          "message": "The CIK 0000000000 needs annual confirmation in 18 days."
+        }
+      ]
+    },
+    {
+      "accessionNumber": "0000000000-22-000003",
+      "status": "SUSPENDED",
+      "type": "TEST",
+      "messages": [
+        {
+          "type": "ERROR",
+          "message": "The submission requires an existing file number"
+        }
+      ]
+    },
+    {
+      "accessionNumber": "0000000000-22-000001",
+      "status": "RECEIVED",
+      "final": "false",
+      "messages": []
+    },
+    {
+      "accessionNumber": "0000000000-22-000002",
+      "type": "LIVE",
+      "status": "BLOCKED",
+      "messages": [
+        {
+          "type": "INFO",
+          "message": "Fee-polling"
+        }
+      ]
+    }
+  ]
+}
+Example Description
+A list of statuses for the requested accession numbers.
+
+
+No links
+204	
+No Content. None of the provided accession numbers were found even though the request was authorized.
+
+No links
+400	
+Bad Request. A correctly formed list of valid accession numbers must be provided.
+
+Media type
+
+application/json
+Examples
+
+Bad Request
+Example Value
+Schema
+{
+  "tracking": "820c24bc6ce9ce84cc5b739819d27742",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Bad Request"
+    }
+  ]
+}
+Example Description
+Bad Request. A correctly formed list of valid accession numbers must be provided.
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. This resource requires a valid Filer API Token. Please ensure that the token that is being used is a Filer API Token and is active in Filer Management.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request has included at least one valid token but that token do not give access to this resource.
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Server Error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+503	
+A request was made to this resource outside of operational hours.
+
+Media type
+
+application/json
+Examples
+
+Out of Operational Hours
+Example Value
+Schema
+{
+  "tracking": "44230c24bc6ce1b884cc5b739819d29942",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "EDGAR is not available because EDGAR is reporting that it is not within operating hours."
+    }
+  ]
+}
+Example Description
+A request was made to this resource outside of the windows of operation for the EDGAR system and this request could not be completed. This status is also returned when the operational status of EDGAR cannot be determined.
+
+
+No links
+
+GET
+/submission/{accessionNumber}/status
+Check Single Submission Status
+
+
+Description
+When an authorized filer requests the status of a single submission that the filer made, the Check Single Submission Status API will respond with the current status of that submission.
+
+Endpoint
+https://api.edgarfiling.sec.gov/submission/{accessionNumber}/status
+
+Parameters
+Try it out
+Name	Description
+accessionNumber *
+string
+(path)
+The accession number returned when a submission is successfully transmitted.
+
+Example : 0000000000-24-000001
+
+0000000000-24-000001
+Responses
+Code	Description	Links
+200	
+Ok. A submission filed by the authorized filer, with the given accession number, was found
+
+Media type
+
+application/json
+Controls Accept header.
+Examples
+
+Accepted with no messages
+Example Value
+Schema
+{
+  "tracking": "5e981101d4bfdee09b95c6f1d53e8551",
+  "locator": "l33922",
+  "accessionNumber": "0000000000-22-000001",
+  "status": "RECEIVED",
+  "final": "false",
+  "messages": []
+}
+Example Description
+The submission has been received but no filer notifications have been produced
+
+
+No links
+400	
+Bad Request. A validly formatted accession number must be provided.
+
+Media type
+
+application/json
+Examples
+
+Bad Request
+Example Value
+Schema
+{
+  "tracking": "d1230c24bc6ce9ce84cc5b739819d27742",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Accession number '0000000000-22-0000011' is not in the correct format for an accession number, ##########-##-######"
+    }
+  ]
+}
+Example Description
+Bad request. A valid accession number must be provided.
+
+
+No links
+401	
+Unauthorized. This resource is being accessed with invalid or inactive tokens. Please check that the tokens in use are active in Filer Management or are assigned to active individuals.
+
+Media type
+
+application/json
+Examples
+
+Unauthorized
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Unauthorized"
+    }
+  ]
+}
+Example Description
+The request does not include any valid tokens for accessing this resource.
+
+
+No links
+403	
+Forbidden. This resource requires a valid Filer API Token. Please ensure that the token that is being used is a Filer API Token and is active in Filer Management.
+
+Media type
+
+application/json
+Examples
+
+Forbidden
+Example Value
+Schema
+{
+  "tracking": "68e8ce7c1552544bccbdccd2663dced4",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "Forbidden."
+    }
+  ]
+}
+Example Description
+The request has included at least one valid token but that token do not give access to this resource.
+
+
+No links
+404	
+Not Found. No matching accession number found even though the request was authorized and a validly formatted accession number was provided.
+
+Media type
+
+application/json
+Examples
+
+No submission information found
+Example Value
+Schema
+{
+  "tracking": "ddb81101d4bfdee09b95c6f1233e8551",
+  "locator": "l33922",
+  "messages": [
+    {
+      "type": "INFO",
+      "message": "No submission found for '0000000000-22-000001'"
+    }
+  ]
+}
+Example Description
+No submission information found
+
+
+No links
+500	
+Server error. An unexpected server-side error has occurred.
+
+Media type
+
+application/json
+Examples
+
+Server Error
+Example Value
+Schema
+{
+  "tracking": "937de162bf9f1b6e7fc2bfb1165c1998",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "An unexpected error has occurred."
+    }
+  ]
+}
+Example Description
+An unexpected internal error has occurred processing this request. Contact EDGAR Help Desk with your tracking number to troubleshoot.
+
+
+No links
+503	
+A request was made to this resource outside of operational hours.
+
+Media type
+
+application/json
+Examples
+
+Out of Operational Hours
+Example Value
+Schema
+{
+  "tracking": "44230c24bc6ce1b884cc5b739819d29942",
+  "locator": "19ab67",
+  "messages": [
+    {
+      "type": "ERROR",
+      "content": "EDGAR is not available because EDGAR is reporting that it is not within operating hours."
+    }
+  ]
+}
+Example Description
+A request was made to this resource outside of the windows of operation for the EDGAR system and this request could not be completed. This status is also returned when the operational status of EDGAR cannot be determined.
+
+
+No links

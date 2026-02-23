@@ -1,0 +1,128 @@
+# Economic planes mapping (5-plane Sudoku world model).
+#
+# Maps GICS-style sectors and industries to the 5 economic planes
+# described in The_Apps_core_idea.pdf Section A.
+#
+# A company can participate in multiple planes. The primary plane
+# is determined by sector; secondary planes come from industry matches.
+# This classification informs linked variable routing, not the
+# survival hierarchy (which is tier-based, not plane-based).
+
+planes:
+  supply:
+    label: "Supply & Raw Materials"
+    description: "Companies that extract, produce, or provide raw inputs to the economy"
+    sectors:
+      - "Energy"
+      - "Materials"
+      - "Basic Materials"
+    industries:
+      - "Oil & Gas"
+      - "Metals & Mining"
+      - "Chemicals"
+      - "Agricultural Products"
+      - "Paper & Forest Products"
+      - "Steel"
+      - "Mining"
+      - "Coal"
+
+  manufacturing:
+    label: "Manufacturing & Production"
+    description: "Companies that transform inputs into goods and services"
+    sectors:
+      - "Industrials"
+      - "Technology"
+      - "Information Technology"
+      - "Healthcare"
+      - "Health Care"
+    industries:
+      - "Automobiles"
+      - "Auto Manufacturers"
+      - "Semiconductor"
+      - "Semiconductors"
+      - "Aerospace & Defense"
+      - "Pharmaceuticals"
+      - "Biotechnology"
+      - "Electronic Equipment"
+      - "Machinery"
+      - "Construction"
+      - "Building Products"
+      - "Electrical Equipment"
+      - "Software"
+      - "Hardware"
+      - "Medical Devices"
+
+  consumption:
+    label: "Consumption & Retail"
+    description: "Companies that sell directly to end consumers"
+    sectors:
+      - "Consumer Discretionary"
+      - "Consumer Cyclical"
+      - "Consumer Staples"
+      - "Consumer Defensive"
+      - "Communication Services"
+    industries:
+      - "Retail"
+      - "Specialty Retail"
+      - "Food & Beverage"
+      - "Restaurants"
+      - "Household Products"
+      - "Apparel"
+      - "Media"
+      - "Entertainment"
+      - "Internet Content"
+      - "E-Commerce"
+      - "Luxury Goods"
+      - "Tobacco"
+      - "Beverages"
+
+  logistics:
+    label: "Logistics & Distribution"
+    description: "Companies that move goods and connect supply to demand"
+    sectors:
+      - "Transportation"
+    industries:
+      - "Airlines"
+      - "Marine Shipping"
+      - "Shipping"
+      - "Trucking"
+      - "Railroads"
+      - "Warehousing"
+      - "Delivery Services"
+      - "Integrated Freight"
+      - "Air Freight"
+      - "Logistics"
+      - "Packaging"
+
+  financial_services:
+    label: "Financial Services"
+    description: "Companies that provide capital, insurance, and financial intermediation"
+    sectors:
+      - "Financial Services"
+      - "Financials"
+      - "Financial"
+      - "Real Estate"
+    industries:
+      - "Banks"
+      - "Banking"
+      - "Insurance"
+      - "Asset Management"
+      - "Capital Markets"
+      - "Exchanges"
+      - "Fintech"
+      - "REITs"
+      - "Mortgage Finance"
+      - "Consumer Finance"
+      - "Diversified Financial"
+
+# Fallback when sector/industry matches no plane
+default_plane: "manufacturing"
+
+# Maps Gemini relationship types to inter-plane connections
+relationship_to_plane:
+  competitors: "same_plane"
+  suppliers: "supply"
+  customers: "consumption"
+  financial_institutions: "financial_services"
+  logistics: "logistics"
+  regulators: "financial_services"

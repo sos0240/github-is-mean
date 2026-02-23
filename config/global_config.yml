@@ -1,0 +1,52 @@
+# Global pipeline configuration for Operator 1.
+
+# HTTP request settings
+timeout_s: 30
+max_retries: 5             # retry count (spec says "cap retries so notebook cannot hang")
+backoff_factor: 2.0        # exponential backoff multiplier (2s, 4s, 8s, 16s, 32s)
+retry_on_status: [429, 500, 502, 503, 504]  # per spec Section D.4
+
+# Rate limiting (token-bucket style, per-host)
+# FMP free tier: 250 calls/day (~0.17/sec). Paid: 300/min (5/sec).
+# Set conservatively for free tier safety. Adjust up for paid plans.
+rate_limit_calls_per_second: 2.0   # max sustained request rate per host
+rate_limit_burst: 5                # max burst size before throttling
+
+# Disk cache TTL for HTTP responses (hours)
+http_cache_ttl_hours: 24
+
+# Entity discovery budgets
+search_budget_per_group: 10   # max search calls per relationship group
+search_budget_global: 50      # max total search calls across all groups
+
+# Cache rebuild control
+# Set to true to force re-fetching all data even when caches exist.
+FORCE_REBUILD: false
+
+# Estimation settings
+# Pass 2 imputer method: "bayesian_ridge" (default, linear) or "vae" (nonlinear)
+estimation_imputer: bayesian_ridge
+# VAE hyperparameters (only used when estimation_imputer is "vae")
+vae_latent_dim: 8
+vae_hidden_dim: 32
+vae_epochs: 80
+vae_kl_weight: 0.5
+
+# LLM provider for report generation, entity discovery, and sentiment.
+# Supported values: "gemini" (default), "claude"
+# Can also be set via the LLM_PROVIDER environment variable.
+# If left empty, auto-detects based on which API key is available.
+llm_provider: ""
+
+# LLM model override (optional). Leave empty to use the provider default.
+# Can also be set via the LLM_MODEL environment variable.
+# Use "auto" to let the factory pick the best report-capable model.
+#
+# Gemini models:  gemini-2.0-flash (default), gemini-1.5-pro,
+#                 gemini-2.5-flash-preview-05-20, gemini-2.5-pro-preview-05-06
+# Claude models:  claude-sonnet-4-20250514 (default), claude-opus-4-20250514,
+#                 claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022
+llm_model: ""
+
+# Logging
+log_level: INFO
