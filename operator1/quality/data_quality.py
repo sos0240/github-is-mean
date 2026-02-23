@@ -39,8 +39,11 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class LookAheadError(Exception):
-    """Raised when a look-ahead violation is detected during quality audit."""
+from operator1.steps.cache_builder import LookAheadError  # noqa: F401 -- re-export
+
+
+class LookAheadBatchError(LookAheadError):
+    """Raised when multiple look-ahead violations are detected during quality audit."""
 
     def __init__(self, details: list[dict[str, str]]) -> None:
         self.details = details
@@ -48,7 +51,8 @@ class LookAheadError(Exception):
             f"{d['entity']}:{d['column']} day={d['day']} report_date={d['report_date']}"
             for d in details
         )
-        super().__init__(f"Look-ahead violations found: {msgs}")
+        # Call Exception.__init__ directly (not LookAheadError's single-entity init)
+        Exception.__init__(self, f"Look-ahead violations found: {msgs}")
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +318,7 @@ def run_quality_checks(
             entity_id, len(violations),
         )
         if fail_on_look_ahead:
-            raise LookAheadError(violations)
+            raise LookAheadBatchError(violations)
 
     # 2. Missing-flag audit
     logger.info("Auditing missing flags for %s ...", entity_id)

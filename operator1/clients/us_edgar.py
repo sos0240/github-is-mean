@@ -282,28 +282,43 @@ class USEdgarClient:
         ]
 
     def search_company(self, name: str) -> list[dict[str, Any]]:
-        """Search for a company by name or ticker."""
-        # Try edgartools find first for smarter search
-        try:
-            self._init_edgartools()
-            import edgar
-            results = edgar.find_company(name)
-            if results and hasattr(results, "__iter__"):
-                found = []
-                for r in results:
-                    found.append({
-                        "ticker": getattr(r, "ticker", getattr(r, "tickers", [""])[0] if hasattr(r, "tickers") else ""),
-                        "name": getattr(r, "name", str(r)),
-                        "cik": str(getattr(r, "cik", "")),
-                        "exchange": "",
-                        "market_id": self.market_id,
-                    })
-                if found:
-                    return found
-        except Exception:
-            pass
+        """Search for a company by name or ticker.
 
-        # Fallback to filtered list
+        Uses a direct HTTP request to the SEC company tickers JSON
+        for reliable, fast search without depending on edgartools
+        (which can hang on network calls in some environments).
+        """
+        # Fast path: direct SEC tickers search (no edgartools dependency)
+        try:
+            import requests
+            resp = requests.get(
+                "https://www.sec.gov/files/company_tickers.json",
+                headers={"User-Agent": self._user_agent},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            query = name.lower()
+            results = []
+            if isinstance(data, dict):
+                for entry in data.values():
+                    ticker = str(entry.get("ticker", "")).upper()
+                    title = str(entry.get("title", ""))
+                    cik = str(entry.get("cik_str", ""))
+                    if query in title.lower() or query in ticker.lower():
+                        results.append({
+                            "ticker": ticker,
+                            "name": title,
+                            "cik": cik,
+                            "exchange": "",
+                            "market_id": self.market_id,
+                        })
+            if results:
+                return results[:50]  # Cap at 50 results
+        except Exception as exc:
+            logger.warning("SEC tickers search failed: %s", exc)
+
+        # Fallback to cached company list
         return self.list_companies(query=name)
 
     # -- Company profile -----------------------------------------------------
@@ -433,9 +448,9 @@ class USEdgarClient:
     def get_peers(self, identifier: str) -> list[str]:
         """Return peer companies based on SIC code matching.
 
-        Finds companies with the same 4-digit SIC code (exact industry
-        match). Falls back to 2-digit SIC (broad sector match) if fewer
-        than 5 exact matches. Returns up to 10 peer tickers.
+        Queries the SEC browse-edgar endpoint to find companies with the
+        same 4-digit SIC code, then maps CIKs back to tickers using the
+        company tickers list.  Returns up to 10 peer tickers.
         """
         profile = self.get_profile(identifier)
         sic = profile.get("sic", "")
@@ -443,47 +458,103 @@ class USEdgarClient:
         if not sic:
             return []
 
-        # Get the full company list to match SIC codes
+        sic_4 = str(sic).zfill(4)
+
+        # Step 1: Build a CIK -> ticker lookup from the company tickers list
         try:
             import requests
-            data = requests.get(
-                "https://www.sec.gov/files/company_tickers_exchange.json",
+            tickers_data = requests.get(
+                "https://www.sec.gov/files/company_tickers.json",
                 headers={"User-Agent": self._user_agent},
                 timeout=30,
             ).json()
-            companies = data.get("data", []) if isinstance(data, dict) else []
+            cik_to_ticker: dict[str, str] = {}
+            if isinstance(tickers_data, dict):
+                for entry in tickers_data.values():
+                    cik_str = str(entry.get("cik_str", "")).lstrip("0")
+                    ticker = str(entry.get("ticker", "")).upper()
+                    if cik_str and ticker:
+                        cik_to_ticker[cik_str] = ticker
         except Exception:
             return []
 
-        sic_4 = str(sic).zfill(4)
-        sic_2 = sic_4[:2]
-        exact_peers: list[str] = []
-        broad_peers: list[str] = []
+        # Step 2: Query SEC browse-edgar for companies with the same SIC
+        peers = self._query_peers_by_sic(sic_4, target_ticker, cik_to_ticker)
 
-        for row in companies:
-            if not isinstance(row, (list, tuple)) or len(row) < 5:
-                continue
-            peer_ticker = str(row[2]).upper()
-            peer_sic = str(row[4]).zfill(4) if row[4] else ""
-
-            if peer_ticker == target_ticker:
-                continue
-
-            if peer_sic == sic_4:
-                exact_peers.append(peer_ticker)
-            elif peer_sic[:2] == sic_2 and len(broad_peers) < 20:
-                broad_peers.append(peer_ticker)
-
-        peers = exact_peers[:10]
+        # Fallback to 2-digit SIC (broad sector) if fewer than 5 exact peers
         if len(peers) < 5:
+            sic_2 = sic_4[:2]
+            broad_peers = self._query_peers_by_sic(
+                sic_2, target_ticker, cik_to_ticker, exclude=set(peers),
+            )
             remaining = 10 - len(peers)
             peers.extend(broad_peers[:remaining])
 
         logger.info(
-            "SEC EDGAR peers for %s (SIC %s): %d exact, %d broad -> %d returned",
-            target_ticker, sic_4, len(exact_peers), len(broad_peers), len(peers),
+            "SEC EDGAR peers for %s (SIC %s): %d returned",
+            target_ticker, sic_4, len(peers),
         )
         return peers[:10]
+
+    def _query_peers_by_sic(
+        self,
+        sic: str,
+        target_ticker: str,
+        cik_to_ticker: dict[str, str],
+        *,
+        exclude: set[str] | None = None,
+    ) -> list[str]:
+        """Query SEC browse-edgar for companies matching a SIC code.
+
+        Returns a list of resolved ticker symbols (up to 10).
+        """
+        import requests
+
+        exclude = exclude or set()
+        try:
+            resp = requests.get(
+                "https://www.sec.gov/cgi-bin/browse-edgar",
+                params={
+                    "action": "getcompany",
+                    "SIC": sic,
+                    "owner": "include",
+                    "count": "100",
+                    "output": "atom",
+                },
+                headers={"User-Agent": self._user_agent},
+                timeout=30,
+            )
+            resp.raise_for_status()
+        except Exception as exc:
+            logger.warning("SEC browse-edgar SIC query failed: %s", exc)
+            return []
+
+        # Parse the Atom XML to extract CIKs
+        peer_ciks: list[str] = []
+        try:
+            from xml.etree import ElementTree as ET
+            root = ET.fromstring(resp.content)
+            ns = {"atom": "http://www.w3.org/2005/Atom"}
+            for entry in root.findall(".//atom:entry", ns):
+                for el in entry.iter():
+                    tag = el.tag.split("}")[-1] if "}" in el.tag else el.tag
+                    if tag == "cik" and el.text:
+                        peer_ciks.append(el.text.lstrip("0"))
+                        break
+        except Exception as exc:
+            logger.warning("Failed to parse SEC browse-edgar XML: %s", exc)
+            return []
+
+        # Map CIKs to tickers, excluding the target and already-found peers
+        peers: list[str] = []
+        for cik in peer_ciks:
+            ticker = cik_to_ticker.get(cik, "")
+            if ticker and ticker != target_ticker and ticker not in peers and ticker not in exclude:
+                peers.append(ticker)
+            if len(peers) >= 10:
+                break
+
+        return peers
 
     def get_executives(self, identifier: str) -> list[dict[str, Any]]:
         """SEC doesn't have a direct executives endpoint; returns empty."""

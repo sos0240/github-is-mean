@@ -35,6 +35,11 @@ logger = logging.getLogger(__name__)
 # Standard lookback for macro data (5 years of context)
 _MACRO_LOOKBACK_DAYS = 365 * 5
 
+# FRED demo key rate limit: 5 requests/minute (12s between requests)
+_FRED_DEMO_RATE_LIMIT_SECONDS = 12.0
+_fred_last_request_time: float = 0.0
+_fred_demo_key_warned: bool = False
+
 
 # ---------------------------------------------------------------------------
 # FRED (US Federal Reserve Economic Data)
@@ -48,9 +53,35 @@ def _fetch_fred(api_url: str, series_id: str, api_key: str = "") -> pd.Series:
 
     FRED API: https://fred.stlouisfed.org/docs/api/fred/
     Free API key required (register at https://fred.stlouisfed.org/docs/api/api_key.html)
+
+    When using the DEMO_KEY fallback, rate limiting is enforced at
+    5 requests/minute to respect FRED's demo tier limits.
     """
+    import time as _time
+
+    global _fred_last_request_time, _fred_demo_key_warned
+
+    is_demo = False
     if not api_key:
         api_key = "DEMO_KEY"
+        is_demo = True
+
+    if is_demo:
+        if not _fred_demo_key_warned:
+            logger.warning(
+                "No FRED_API_KEY configured -- using DEMO_KEY with strict "
+                "rate limiting (5 req/min). Register a free key at "
+                "https://fred.stlouisfed.org/docs/api/api_key.html for "
+                "faster macro data fetching."
+            )
+            _fred_demo_key_warned = True
+
+        # Enforce rate limit for demo key
+        elapsed = _time.time() - _fred_last_request_time
+        if elapsed < _FRED_DEMO_RATE_LIMIT_SECONDS:
+            sleep_time = _FRED_DEMO_RATE_LIMIT_SECONDS - elapsed
+            logger.debug("FRED demo rate limit: sleeping %.1fs", sleep_time)
+            _time.sleep(sleep_time)
 
     start = (date.today() - timedelta(days=_MACRO_LOOKBACK_DAYS)).isoformat()
 
@@ -59,6 +90,7 @@ def _fetch_fred(api_url: str, series_id: str, api_key: str = "") -> pd.Series:
         from fredapi import Fred
         fred = Fred(api_key=api_key)
         series = fred.get_series(series_id, observation_start=start)
+        _fred_last_request_time = _time.time()
         if series is not None and not series.empty:
             series.name = series_id
             logger.debug("fredapi: fetched %d observations for %s", len(series), series_id)
@@ -66,6 +98,7 @@ def _fetch_fred(api_url: str, series_id: str, api_key: str = "") -> pd.Series:
     except ImportError:
         logger.debug("fredapi not installed; falling back to direct API")
     except Exception as exc:
+        _fred_last_request_time = _time.time()
         logger.debug("fredapi failed for %s: %s; falling back to direct API", series_id, exc)
 
     # Fallback: direct REST API
@@ -78,6 +111,7 @@ def _fetch_fred(api_url: str, series_id: str, api_key: str = "") -> pd.Series:
     }
 
     data = cached_get(url, params=params)
+    _fred_last_request_time = _time.time()
     observations = data.get("observations", [])
 
     if not observations:
@@ -100,9 +134,9 @@ def _fetch_fred(api_url: str, series_id: str, api_key: str = "") -> pd.Series:
 # ---------------------------------------------------------------------------
 
 def _fetch_ecb(api_url: str, series_key: str) -> pd.Series:
-    """Fetch a single ECB SDW series using pandasdmx or direct CSV.
+    """Fetch a single ECB SDW series using sdmx1 or direct CSV.
 
-    Primary: pandasdmx (https://github.com/dr-leo/pandasdmx)
+    Primary: sdmx1 (https://github.com/khaeru/sdmx) -- successor to pandasdmx
     Fallback: Direct ECB SDW REST API (CSV)
 
     ECB SDW REST API: https://sdw-wsrest.ecb.europa.eu/help/
@@ -110,10 +144,10 @@ def _fetch_ecb(api_url: str, series_key: str) -> pd.Series:
     """
     start_period = (date.today() - timedelta(days=_MACRO_LOOKBACK_DAYS)).strftime("%Y-%m")
 
-    # Try pandasdmx first
+    # Try sdmx1 first (successor to pandasdmx, supports pydantic v2)
     try:
-        import pandasdmx as sdmx
-        ecb = sdmx.Request("ECB")
+        import sdmx
+        ecb = sdmx.Client("ECB")
         # Parse the series key: e.g. "ICP.M.U2.N.000000.4.ANR"
         # The flow_id is the first part before the first dot
         parts = series_key.split(".")
@@ -124,7 +158,7 @@ def _fetch_ecb(api_url: str, series_key: str) -> pd.Series:
             df = sdmx.to_pandas(resp)
             if isinstance(df, pd.Series) and not df.empty:
                 df.name = series_key
-                logger.debug("pandasdmx: fetched %d ECB observations for %s", len(df), series_key)
+                logger.debug("sdmx1: fetched %d ECB observations for %s", len(df), series_key)
                 return df.dropna()
             elif isinstance(df, pd.DataFrame) and not df.empty:
                 # Take the first column
@@ -132,9 +166,9 @@ def _fetch_ecb(api_url: str, series_key: str) -> pd.Series:
                 series.name = series_key
                 return series.dropna()
     except ImportError:
-        logger.debug("pandasdmx not installed; falling back to direct ECB API")
+        logger.debug("sdmx1 not installed; falling back to direct ECB API")
     except Exception as exc:
-        logger.debug("pandasdmx ECB failed for %s: %s; falling back to direct API", series_key, exc)
+        logger.debug("sdmx1 ECB failed for %s: %s; falling back to direct API", series_key, exc)
 
     # Fallback: direct CSV
     url = f"{api_url}/data/{series_key}"

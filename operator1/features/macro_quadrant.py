@@ -110,28 +110,7 @@ def _extract_yearly_value(
     return result if not result.empty else None
 
 
-def _align_yearly_to_daily(
-    yearly: pd.Series,
-    daily_index: pd.DatetimeIndex,
-) -> pd.Series:
-    """Align yearly data to daily index via as-of logic.
-
-    For each day, use the value from the latest year <= day's year.
-    """
-    if yearly is None or yearly.empty:
-        return pd.Series(np.nan, index=daily_index)
-
-    result = pd.Series(np.nan, index=daily_index)
-    years_available = sorted(yearly.index)
-
-    for day in daily_index:
-        day_year = day.year
-        # Find latest year <= day_year
-        candidates = [y for y in years_available if y <= day_year]
-        if candidates:
-            result[day] = yearly[candidates[-1]]
-
-    return result
+from operator1.features.macro_alignment import align_yearly_series_to_daily as _align_yearly_to_daily  # noqa: E501
 
 
 def _classify_quadrant(

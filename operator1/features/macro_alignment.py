@@ -115,6 +115,38 @@ def _align_yearly_to_daily(
     return result
 
 
+def align_yearly_series_to_daily(
+    yearly: pd.Series | None,
+    daily_index: pd.DatetimeIndex,
+) -> pd.Series:
+    """Align a yearly Series (year-indexed) to a daily date index.
+
+    Thin wrapper around ``_align_yearly_to_daily`` for callers that
+    already have a Series with year as the index (e.g. macro_quadrant).
+
+    Parameters
+    ----------
+    yearly:
+        Series with integer year index and float values.
+    daily_index:
+        Business-day DatetimeIndex.
+
+    Returns
+    -------
+    pd.Series
+        Daily-aligned series.
+    """
+    if yearly is None or yearly.empty:
+        return pd.Series(np.nan, index=daily_index)
+
+    # Convert Series to DataFrame format expected by _align_yearly_to_daily
+    df = pd.DataFrame({
+        "year": yearly.index,
+        "value": yearly.values,
+    })
+    return _align_yearly_to_daily(df, daily_index, yearly.name or "macro_var")
+
+
 # ---------------------------------------------------------------------------
 # Derived macro variables
 # ---------------------------------------------------------------------------

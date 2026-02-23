@@ -620,11 +620,20 @@ def save_predictions(
     return parquet_path, json_path
 
 
-def _safe_float(val: float) -> float | None:
-    """Convert NaN to None for JSON serialisation."""
-    if isinstance(val, float) and math.isnan(val):
+def _safe_float(val: Any) -> float | None:
+    """Convert a value to a JSON-safe float (None for NaN/Inf).
+
+    Handles float, int, numpy scalars, and edge cases gracefully.
+    """
+    if val is None:
         return None
-    return val
+    try:
+        f = float(val)
+        if math.isnan(f) or math.isinf(f):
+            return None
+        return f
+    except (TypeError, ValueError):
+        return None
 
 
 # ===========================================================================
