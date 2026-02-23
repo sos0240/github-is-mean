@@ -52,7 +52,7 @@ pycvm>=0.4                 # Brazil CVM data
 # Phase 3: Macro data libraries
 fredapi>=0.5               # US FRED (replaces manual HTTP calls)
 wbgapi>=1.0                # World Bank global fallback (200+ countries)
-pandasdmx>=1.0             # SDMX: ECB, OECD, Eurostat, INSEE
+sdmx1>=2.0                 # SDMX: ECB, OECD, Eurostat, INSEE (successor to pandasdmx, pydantic v2 compatible)
 
 # Testing
 pytest>=7.0

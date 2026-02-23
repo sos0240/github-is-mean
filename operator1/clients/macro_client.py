@@ -100,9 +100,9 @@ def _fetch_fred(api_url: str, series_id: str, api_key: str = "") -> pd.Series:
 # ---------------------------------------------------------------------------
 
 def _fetch_ecb(api_url: str, series_key: str) -> pd.Series:
-    """Fetch a single ECB SDW series using pandasdmx or direct CSV.
+    """Fetch a single ECB SDW series using sdmx1 or direct CSV.
 
-    Primary: pandasdmx (https://github.com/dr-leo/pandasdmx)
+    Primary: sdmx1 (https://github.com/khaeru/sdmx) -- successor to pandasdmx
     Fallback: Direct ECB SDW REST API (CSV)
 
     ECB SDW REST API: https://sdw-wsrest.ecb.europa.eu/help/
@@ -110,10 +110,10 @@ def _fetch_ecb(api_url: str, series_key: str) -> pd.Series:
     """
     start_period = (date.today() - timedelta(days=_MACRO_LOOKBACK_DAYS)).strftime("%Y-%m")
 
-    # Try pandasdmx first
+    # Try sdmx1 first (successor to pandasdmx, supports pydantic v2)
     try:
-        import pandasdmx as sdmx
-        ecb = sdmx.Request("ECB")
+        import sdmx
+        ecb = sdmx.Client("ECB")
         # Parse the series key: e.g. "ICP.M.U2.N.000000.4.ANR"
         # The flow_id is the first part before the first dot
         parts = series_key.split(".")
@@ -124,7 +124,7 @@ def _fetch_ecb(api_url: str, series_key: str) -> pd.Series:
             df = sdmx.to_pandas(resp)
             if isinstance(df, pd.Series) and not df.empty:
                 df.name = series_key
-                logger.debug("pandasdmx: fetched %d ECB observations for %s", len(df), series_key)
+                logger.debug("sdmx1: fetched %d ECB observations for %s", len(df), series_key)
                 return df.dropna()
             elif isinstance(df, pd.DataFrame) and not df.empty:
                 # Take the first column
@@ -132,9 +132,9 @@ def _fetch_ecb(api_url: str, series_key: str) -> pd.Series:
                 series.name = series_key
                 return series.dropna()
     except ImportError:
-        logger.debug("pandasdmx not installed; falling back to direct ECB API")
+        logger.debug("sdmx1 not installed; falling back to direct ECB API")
     except Exception as exc:
-        logger.debug("pandasdmx ECB failed for %s: %s; falling back to direct API", series_key, exc)
+        logger.debug("sdmx1 ECB failed for %s: %s; falling back to direct API", series_key, exc)
 
     # Fallback: direct CSV
     url = f"{api_url}/data/{series_key}"
