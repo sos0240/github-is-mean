@@ -39,13 +39,7 @@ _LLM_HOST_RATE_LIMITS: dict[str, float] = {
 }
 
 
-def _extract_host(url: str) -> str:
-    """Extract the hostname from a URL."""
-    try:
-        from urllib.parse import urlparse
-        return urlparse(url).hostname or "unknown"
-    except Exception:
-        return "unknown"
+from operator1.http_utils import _extract_host, _sanitise_url  # shared utilities
 
 
 def _rate_limit_sleep(host: str, calls_per_second: float | None = None) -> None:
@@ -65,9 +59,7 @@ def _rate_limit_sleep(host: str, calls_per_second: float | None = None) -> None:
     _last_request_time_by_host[host] = time.time()
 
 
-def _sanitise_url(url: str) -> str:
-    """Strip API keys from a URL before logging."""
-    return re.sub(r"(key=)[^&]+", r"\1***", url)
+# _sanitise_url imported from operator1.http_utils above
 
 
 # ---------------------------------------------------------------------------
