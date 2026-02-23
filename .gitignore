@@ -5,5 +5,9 @@
 # Secrets (never commit)
 .env
 
-# Cache artifacts
+# Cache artifacts (cache/.gitkeep is tracked to preserve the directory)
 cache/
+!cache/.gitkeep
+
+# Prevent accidental commit of git internals as a regular folder
+git/
