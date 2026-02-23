@@ -35,6 +35,11 @@ logger = logging.getLogger(__name__)
 # Standard lookback for macro data (5 years of context)
 _MACRO_LOOKBACK_DAYS = 365 * 5
 
+# FRED demo key rate limit: 5 requests/minute (12s between requests)
+_FRED_DEMO_RATE_LIMIT_SECONDS = 12.0
+_fred_last_request_time: float = 0.0
+_fred_demo_key_warned: bool = False
+
 
 # ---------------------------------------------------------------------------
 # FRED (US Federal Reserve Economic Data)
@@ -48,9 +53,35 @@ def _fetch_fred(api_url: str, series_id: str, api_key: str = "") -> pd.Series:
 
     FRED API: https://fred.stlouisfed.org/docs/api/fred/
     Free API key required (register at https://fred.stlouisfed.org/docs/api/api_key.html)
+
+    When using the DEMO_KEY fallback, rate limiting is enforced at
+    5 requests/minute to respect FRED's demo tier limits.
     """
+    import time as _time
+
+    global _fred_last_request_time, _fred_demo_key_warned
+
+    is_demo = False
     if not api_key:
         api_key = "DEMO_KEY"
+        is_demo = True
+
+    if is_demo:
+        if not _fred_demo_key_warned:
+            logger.warning(
+                "No FRED_API_KEY configured -- using DEMO_KEY with strict "
+                "rate limiting (5 req/min). Register a free key at "
+                "https://fred.stlouisfed.org/docs/api/api_key.html for "
+                "faster macro data fetching."
+            )
+            _fred_demo_key_warned = True
+
+        # Enforce rate limit for demo key
+        elapsed = _time.time() - _fred_last_request_time
+        if elapsed < _FRED_DEMO_RATE_LIMIT_SECONDS:
+            sleep_time = _FRED_DEMO_RATE_LIMIT_SECONDS - elapsed
+            logger.debug("FRED demo rate limit: sleeping %.1fs", sleep_time)
+            _time.sleep(sleep_time)
 
     start = (date.today() - timedelta(days=_MACRO_LOOKBACK_DAYS)).isoformat()
 
@@ -59,6 +90,7 @@ def _fetch_fred(api_url: str, series_id: str, api_key: str = "") -> pd.Series:
         from fredapi import Fred
         fred = Fred(api_key=api_key)
         series = fred.get_series(series_id, observation_start=start)
+        _fred_last_request_time = _time.time()
         if series is not None and not series.empty:
             series.name = series_id
             logger.debug("fredapi: fetched %d observations for %s", len(series), series_id)
@@ -66,6 +98,7 @@ def _fetch_fred(api_url: str, series_id: str, api_key: str = "") -> pd.Series:
     except ImportError:
         logger.debug("fredapi not installed; falling back to direct API")
     except Exception as exc:
+        _fred_last_request_time = _time.time()
         logger.debug("fredapi failed for %s: %s; falling back to direct API", series_id, exc)
 
     # Fallback: direct REST API
@@ -78,6 +111,7 @@ def _fetch_fred(api_url: str, series_id: str, api_key: str = "") -> pd.Series:
     }
 
     data = cached_get(url, params=params)
+    _fred_last_request_time = _time.time()
     observations = data.get("observations", [])
 
     if not observations:
