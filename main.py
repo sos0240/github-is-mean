@@ -848,7 +848,7 @@ Non-interactive examples:
                         "Macro quadrant: %s (growth_trend=%.2f, %d days classified)",
                         macro_quadrant_result.current_quadrant,
                         macro_quadrant_result.growth_trend
-                        if not (macro_quadrant_result.growth_trend != macro_quadrant_result.growth_trend)
+                        if not pd.isna(macro_quadrant_result.growth_trend)
                         else 0.0,
                         macro_quadrant_result.n_days_classified,
                     )
