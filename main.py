@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -347,6 +348,21 @@ Non-interactive examples:
         help="Generate PDF report (requires pandoc)",
     )
     parser.add_argument(
+        "--llm-model", type=str, default="",
+        help=(
+            "LLM model name to use (e.g. gemini-2.0-flash, claude-sonnet-4-20250514). "
+            "Overrides the default model for the selected provider. "
+            "Use 'auto' to let the factory pick the best model."
+        ),
+    )
+    parser.add_argument(
+        "--llm-provider", type=str, default="",
+        help=(
+            "LLM provider to use: 'gemini' or 'claude'. "
+            "If not set, auto-detected from available API keys."
+        ),
+    )
+    parser.add_argument(
         "--verbose", "-v", action="store_true",
         help="Enable debug logging",
     )
@@ -354,6 +370,14 @@ Non-interactive examples:
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    # ------------------------------------------------------------------
+    # Apply LLM CLI overrides to environment (before any LLM usage)
+    # ------------------------------------------------------------------
+    if args.llm_provider:
+        os.environ["LLM_PROVIDER"] = args.llm_provider.strip().lower()
+    if args.llm_model:
+        os.environ["LLM_MODEL"] = args.llm_model.strip()
 
     # ------------------------------------------------------------------
     # Info-only commands

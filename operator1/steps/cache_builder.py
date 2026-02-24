@@ -80,6 +80,32 @@ STATEMENT_FIELDS = (
     "eps", "eps_diluted",
 )
 
+# Macro indicator columns persisted in the daily cache so that
+# downstream models (survival timeline, walk-forward) can consume them
+# as features without re-fetching.
+MACRO_INDICATOR_FIELDS = (
+    "gdp_growth", "gdp_current_usd",
+    "inflation_rate_yoy", "inflation_rate_daily_equivalent",
+    "real_interest_rate", "lending_interest_rate",
+    "unemployment_rate",
+    "official_exchange_rate_lcu_per_usd",
+    "credit_spread", "yield_curve_slope", "fx_volatility",
+    "real_return_1d",
+)
+
+# Company protection / survival score columns persisted alongside the
+# cache so walk-forward and survival timeline can use them as features.
+PROTECTION_SCORE_FIELDS = (
+    "company_survival_mode_flag",
+    "country_survival_mode_flag",
+    "country_protected_flag",
+    "fuzzy_protection_degree",
+    "fuzzy_sector_score",
+    "fuzzy_economic_score",
+    "fuzzy_policy_score",
+    "sector_strategicness",
+)
+
 
 # ---------------------------------------------------------------------------
 # Date index
@@ -441,10 +467,107 @@ def build_entity_daily_cache(
         if f not in daily.columns:
             daily[f] = np.nan
 
+    # 4b. Ensure macro indicator placeholders exist (filled later by
+    # enrich_cache_with_indicators) so downstream code can always
+    # reference them without KeyError.
+    for f in MACRO_INDICATOR_FIELDS:
+        if f not in daily.columns:
+            daily[f] = np.nan
+    for f in PROTECTION_SCORE_FIELDS:
+        if f not in daily.columns:
+            daily[f] = np.nan
+
     # 5. Missing-data flags
     daily = add_missing_flags(daily)
 
     return daily
+
+
+# ---------------------------------------------------------------------------
+# Indicator enrichment (Phase 1 -- survival time-series)
+# ---------------------------------------------------------------------------
+
+
+def enrich_cache_with_indicators(
+    daily: pd.DataFrame,
+    macro_aligned: pd.DataFrame | None = None,
+    survival_flags: pd.DataFrame | None = None,
+    fuzzy_result_series: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Merge macro indicators and protection scores into the daily cache.
+
+    This is the Phase 1 entry point that ensures every model-consumable
+    feature is persisted in the 2-year daily Parquet cache.
+
+    Parameters
+    ----------
+    daily:
+        The entity daily cache (output of ``build_entity_daily_cache``).
+    macro_aligned:
+        Output of ``align_macro_to_daily()`` -- contains GDP, inflation,
+        unemployment, rates, FX vol columns aligned to daily frequency.
+    survival_flags:
+        DataFrame with ``company_survival_mode_flag``,
+        ``country_survival_mode_flag``, ``country_protected_flag`` columns
+        (output of ``compute_survival_flags``).
+    fuzzy_result_series:
+        DataFrame with fuzzy protection columns:
+        ``fuzzy_protection_degree``, ``fuzzy_sector_score``,
+        ``fuzzy_economic_score``, ``fuzzy_policy_score``.
+
+    Returns
+    -------
+    pd.DataFrame
+        Enriched daily cache with all indicator columns populated.
+    """
+    result = daily.copy()
+
+    # --- Macro indicators ---
+    if macro_aligned is not None and not macro_aligned.empty:
+        for col in MACRO_INDICATOR_FIELDS:
+            if col in macro_aligned.columns:
+                result[col] = macro_aligned[col].reindex(result.index)
+        logger.info(
+            "Enriched cache with %d macro indicator columns",
+            sum(1 for c in MACRO_INDICATOR_FIELDS if c in macro_aligned.columns),
+        )
+
+    # --- Survival flags ---
+    if survival_flags is not None and not survival_flags.empty:
+        for col in ("company_survival_mode_flag", "country_survival_mode_flag",
+                     "country_protected_flag"):
+            if col in survival_flags.columns:
+                result[col] = survival_flags[col].reindex(result.index)
+
+    # --- Fuzzy protection scores ---
+    if fuzzy_result_series is not None and not fuzzy_result_series.empty:
+        fuzzy_cols = (
+            "fuzzy_protection_degree", "fuzzy_sector_score",
+            "fuzzy_economic_score", "fuzzy_policy_score",
+        )
+        for col in fuzzy_cols:
+            if col in fuzzy_result_series.columns:
+                result[col] = fuzzy_result_series[col].reindex(result.index)
+
+    # --- Sector strategicness (static per entity, from profile) ---
+    if "sector" in result.columns:
+        try:
+            from operator1.analysis.fuzzy_protection import _sector_membership
+            sector_vals = result["sector"].fillna("")
+            result["sector_strategicness"] = sector_vals.apply(
+                lambda s: _sector_membership(s) if isinstance(s, str) else 0.1,
+            )
+        except ImportError:
+            pass
+
+    # Refresh missing-data flags for newly added columns
+    result = add_missing_flags(result)
+
+    logger.info(
+        "Cache enrichment complete: %d total columns",
+        len(result.columns),
+    )
+    return result
 
 
 # ---------------------------------------------------------------------------

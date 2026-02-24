@@ -7,7 +7,7 @@ financial analysis pipeline step by step.
 Flow:
   1. System checks (Python version, internet)
   2. Dependency check
-  3. LLM API key setup (always prompt first)
+  3. LLM provider & model selection (always prompt first)
   4. Data source mode: wrappers-only vs API + wrappers
   5. If API + wrappers: prompt for market-specific API keys
   6. Company + country input
@@ -216,6 +216,54 @@ def _mask_key(key: str) -> str:
 # LLM key setup (always prompt first)
 # ---------------------------------------------------------------------------
 
+def _select_llm_model(provider: str) -> str:
+    """Show available models for the chosen provider and let the user pick.
+
+    Returns the model name string, or empty string to use the default.
+    """
+    try:
+        from operator1.clients.llm_factory import get_available_models
+        models = get_available_models(provider)
+    except Exception:
+        return ""
+
+    if not models:
+        return ""
+
+    print("")
+    print(_bold(f"  Available {provider.title()} models:"))
+    print("")
+    for idx, m in enumerate(models, 1):
+        ctx = m["context_window"]
+        out = m["max_output_tokens"]
+        tier = m["tier"]
+        # Human-readable context/output sizes
+        ctx_str = f"{ctx // 1_000_000}M" if ctx >= 1_000_000 else f"{ctx // 1_000}K"
+        out_str = f"{out // 1_000}K" if out >= 1_000 else str(out)
+        default_marker = " (default)" if idx == 1 else ""
+        print(f"    {_bold(str(idx))}. {m['name']}")
+        print(f"       {_dim(f'{tier} | {ctx_str} context | {out_str} output')}{_green(default_marker)}")
+    print("")
+
+    choice = _prompt(f"Choose model (1-{len(models)})", "1")
+    try:
+        sel = int(choice) - 1
+        if 0 <= sel < len(models):
+            selected = models[sel]["name"]
+            _ok(f"Model: {selected}")
+            return selected
+    except ValueError:
+        # Try matching by name
+        for m in models:
+            if choice.lower() in m["name"].lower():
+                _ok(f"Model: {m['name']}")
+                return m["name"]
+
+    # Default: first model
+    _ok(f"Model: {models[0]['name']} (default)")
+    return models[0]["name"]
+
+
 def setup_llm_keys() -> dict[str, str]:
     """Prompt for LLM API keys. Always runs at the start of the flow.
 
@@ -289,9 +337,9 @@ def setup_llm_keys() -> dict[str, str]:
 
     if has_gemini and has_claude:
         print("")
-        print(_bold("  Which LLM to use for this session?"))
-        print(f"    {_bold('1')}. Google Gemini  (gemini-2.0-flash)")
-        print(f"    {_bold('2')}. Anthropic Claude (claude-sonnet-4)")
+        print(_bold("  Which LLM provider to use for this session?"))
+        print(f"    {_bold('1')}. Google Gemini")
+        print(f"    {_bold('2')}. Anthropic Claude")
         print("")
         prov = _prompt("Choose (1/2)", "1")
         llm_provider = "claude" if prov == "2" else "gemini"
@@ -300,10 +348,17 @@ def setup_llm_keys() -> dict[str, str]:
     elif has_gemini:
         llm_provider = "gemini"
 
+    # --- Model selection ---
+    llm_model = ""
     if llm_provider:
         _ok(f"LLM provider: {llm_provider}")
         os.environ["LLM_PROVIDER"] = llm_provider
         keys["_llm_provider"] = llm_provider
+
+        llm_model = _select_llm_model(llm_provider)
+        if llm_model:
+            os.environ["LLM_MODEL"] = llm_model
+            keys["_llm_model"] = llm_model
 
     # Set keys in environment
     for k, v in keys.items():
@@ -678,9 +733,9 @@ def main() -> int:
             return 1
 
     # ------------------------------------------------------------------
-    # Step 3: LLM API Key Setup (always prompt first)
+    # Step 3: LLM Provider & Model Selection (always prompt first)
     # ------------------------------------------------------------------
-    _step(3, "LLM API Key Setup")
+    _step(3, "LLM Provider & Model Selection")
 
     keys = setup_llm_keys()
     llm_provider = keys.get("_llm_provider", "")
@@ -772,10 +827,11 @@ def main() -> int:
     print(f"  Linked entities:  {'Yes' if not skip_linked else 'Skip'}")
     print(f"  Temporal models:  {'Yes' if not skip_models else 'Skip'}")
     print(f"  PDF output:       {'Yes' if gen_pdf else 'No'}")
+    llm_model = keys.get("_llm_model", "")
     if llm_provider == "gemini":
-        _llm_label = "Gemini (AI-generated)"
+        _llm_label = f"Gemini / {llm_model or 'default'} (AI-generated)"
     elif llm_provider == "claude":
-        _llm_label = "Claude (AI-generated)"
+        _llm_label = f"Claude / {llm_model or 'default'} (AI-generated)"
     else:
         _llm_label = "Template fallback (no LLM key)"
     print(f"  Report engine:    {_llm_label}")
@@ -805,10 +861,15 @@ def main() -> int:
         cmd.append("--skip-models")
     if gen_pdf:
         cmd.append("--pdf")
+    if llm_provider:
+        cmd.extend(["--llm-provider", llm_provider])
+    llm_model = keys.get("_llm_model", "")
+    if llm_model:
+        cmd.extend(["--llm-model", llm_model])
 
     _info(f"Command: {' '.join(cmd)}")
     if llm_provider:
-        _info(f"LLM_PROVIDER={llm_provider}")
+        _info(f"LLM: {llm_provider} / {llm_model or 'default'}")
     print("")
     _separator()
     print("")

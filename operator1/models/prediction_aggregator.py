@@ -57,6 +57,24 @@ from operator1.models.monte_carlo import MonteCarloResult
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# Survival-mode aware imports (lazy to avoid circular deps)
+# ---------------------------------------------------------------------------
+
+_SURVIVAL_MODES = (
+    "normal",
+    "company_only",
+    "country_protected",
+    "country_exposed",
+    "both_unprotected",
+    "both_protected",
+)
+
+# Default transition blending half-life (in days).  When the survival mode
+# changes, the new mode's weights are blended with the previous mode's
+# weights over this many days using an exponential ramp.
+_TRANSITION_BLEND_HALFLIFE: int = 5
+
+# ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
@@ -887,6 +905,145 @@ def build_multi_horizon_predictions(
 
 
 # ===========================================================================
+# Phase 4 -- Survival-aware model weighting
+# ===========================================================================
+
+
+def compute_survival_aware_weights(
+    base_weights: dict[str, float],
+    mode_weights: dict[str, dict[str, float]] | None = None,
+    current_mode: str = "normal",
+    days_in_mode: int = 0,
+    transition_halflife: int = _TRANSITION_BLEND_HALFLIFE,
+    previous_mode: str | None = None,
+) -> dict[str, float]:
+    """Compute ensemble weights conditioned on the current survival mode.
+
+    Uses walk-forward results (mode_weights) to select different ensemble
+    weights depending on the current survival mode, with soft blending
+    during transitions.
+
+    Parameters
+    ----------
+    base_weights:
+        Default inverse-RMSE weights from ``compute_ensemble_weights``.
+    mode_weights:
+        Per-mode model weights from walk-forward results.
+        ``{mode_label: {model_name: weight}}``.
+    current_mode:
+        Current survival mode label.
+    days_in_mode:
+        How many consecutive days we have been in the current mode.
+    transition_halflife:
+        Number of days for the exponential blend during transitions.
+    previous_mode:
+        The mode we transitioned from (for blending).  If None, no
+        blending is applied.
+
+    Returns
+    -------
+    Dict mapping model_name to weight (sum ~ 1.0).
+    """
+    if mode_weights is None or current_mode not in mode_weights:
+        return base_weights
+
+    target_weights = mode_weights[current_mode]
+
+    # If no transition blending needed, return target weights directly.
+    if previous_mode is None or previous_mode == current_mode or days_in_mode <= 0:
+        return _merge_weight_keys(base_weights, target_weights)
+
+    # Soft blending: exponential ramp from previous mode's weights to
+    # current mode's weights.  alpha = 1 - exp(-days / halflife).
+    alpha = 1.0 - math.exp(-days_in_mode / max(transition_halflife, 1))
+    alpha = max(0.0, min(1.0, alpha))
+
+    prev_weights = mode_weights.get(previous_mode, base_weights)
+
+    blended: dict[str, float] = {}
+    all_models = set(list(prev_weights.keys()) + list(target_weights.keys()))
+    for model in all_models:
+        w_prev = prev_weights.get(model, 0.0)
+        w_target = target_weights.get(model, 0.0)
+        blended[model] = (1.0 - alpha) * w_prev + alpha * w_target
+
+    # Normalise
+    total = sum(blended.values())
+    if total > 0:
+        blended = {k: v / total for k, v in blended.items()}
+
+    return blended
+
+
+def _merge_weight_keys(
+    base: dict[str, float],
+    override: dict[str, float],
+) -> dict[str, float]:
+    """Merge override weights with base, keeping all model keys.
+
+    Models present in override get their override weight.  Models only
+    in base keep a small residual weight.
+    """
+    result: dict[str, float] = {}
+    all_keys = set(list(base.keys()) + list(override.keys()))
+    for k in all_keys:
+        if k in override:
+            result[k] = override[k]
+        else:
+            result[k] = base.get(k, 0.0) * 0.1  # small residual
+
+    # Normalise
+    total = sum(result.values())
+    if total > 0:
+        result = {k: v / total for k, v in result.items()}
+    return result
+
+
+def get_survival_context_from_cache(
+    cache: pd.DataFrame,
+) -> dict[str, Any]:
+    """Extract survival mode context from a daily cache for weighting.
+
+    Returns a dict with keys: current_mode, days_in_mode, previous_mode,
+    stability_score.
+    """
+    context: dict[str, Any] = {
+        "current_mode": "normal",
+        "days_in_mode": 0,
+        "previous_mode": None,
+        "stability_score": 1.0,
+    }
+
+    if cache.empty:
+        return context
+
+    if "survival_mode" in cache.columns:
+        modes = cache["survival_mode"].dropna()
+        if len(modes) > 0:
+            context["current_mode"] = str(modes.iloc[-1])
+
+            # Find previous mode (last different mode)
+            if len(modes) > 1:
+                current = context["current_mode"]
+                for i in range(len(modes) - 2, -1, -1):
+                    if str(modes.iloc[i]) != current:
+                        context["previous_mode"] = str(modes.iloc[i])
+                        break
+
+    if "days_in_mode" in cache.columns:
+        dim = cache["days_in_mode"].dropna()
+        if len(dim) > 0:
+            context["days_in_mode"] = int(dim.iloc[-1])
+
+    if "stability_score_21d" in cache.columns:
+        stab = cache["stability_score_21d"].dropna()
+        if len(stab) > 0:
+            context["stability_score"] = float(stab.iloc[-1])
+
+    return context
+
+
+# ===========================================================================
 # Pipeline entry point
 # ===========================================================================
 
@@ -900,6 +1057,7 @@ def run_prediction_aggregation(
     survival_risk_multiplier: float = DEFAULT_SURVIVAL_RISK_MULTIPLIER,
     save_to_cache: bool = True,
     cache_dir: str = CACHE_DIR,
+    mode_weights: dict[str, dict[str, float]] | None = None,
 ) -> PredictionAggregatorResult:
     """Run the full prediction aggregation pipeline.
 
@@ -925,6 +1083,12 @@ def run_prediction_aggregation(
         If ``True``, write predictions.parquet and prediction_summary.json.
     cache_dir:
         Directory for cache files.
+    mode_weights:
+        Per-survival-mode model weights from walk-forward results
+        (output of ``get_mode_weights_from_walk_forward``).  When
+        provided and the cache contains survival timeline columns,
+        ensemble weights are conditioned on the current survival mode
+        with soft transition blending.
 
     Returns
     -------
@@ -950,11 +1114,32 @@ def run_prediction_aggregation(
         result.current_regime = "unknown"
 
     # ------------------------------------------------------------------
-    # Ensemble weights
+    # Ensemble weights (survival-aware if mode_weights provided)
     # ------------------------------------------------------------------
-    result.ensemble_weights = compute_ensemble_weights(
+    base_weights = compute_ensemble_weights(
         forecast_result.metrics,
     )
+
+    # Apply survival-aware weighting if walk-forward mode weights and
+    # survival context are available.
+    if mode_weights:
+        surv_ctx = get_survival_context_from_cache(cache)
+        result.ensemble_weights = compute_survival_aware_weights(
+            base_weights=base_weights,
+            mode_weights=mode_weights,
+            current_mode=surv_ctx["current_mode"],
+            days_in_mode=surv_ctx["days_in_mode"],
+            previous_mode=surv_ctx["previous_mode"],
+        )
+        logger.info(
+            "Survival-aware weights applied: mode=%s, days_in_mode=%d, "
+            "stability=%.3f",
+            surv_ctx["current_mode"],
+            surv_ctx["days_in_mode"],
+            surv_ctx["stability_score"],
+        )
+    else:
+        result.ensemble_weights = base_weights
 
     # Count model availability.
     failed_flags = [

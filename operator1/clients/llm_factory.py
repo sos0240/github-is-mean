@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import Any
 
 from operator1.clients.llm_base import LLMClient
 from operator1.config_loader import get_global_config
@@ -23,6 +24,42 @@ logger = logging.getLogger(__name__)
 
 # Supported provider identifiers (case-insensitive)
 _SUPPORTED_PROVIDERS = ("gemini", "claude")
+
+
+def get_available_models(provider: str) -> list[dict[str, Any]]:
+    """Return a list of available models for the given provider.
+
+    Each entry is a dict with keys: name, max_output_tokens, context_window,
+    report_capable, tier.
+
+    Parameters
+    ----------
+    provider:
+        ``"gemini"`` or ``"claude"``.
+
+    Returns
+    -------
+    List of model info dicts, sorted by tier priority then output capacity.
+    """
+    from operator1.clients.llm_base import GEMINI_MODELS, CLAUDE_MODELS
+
+    registry = GEMINI_MODELS if provider == "gemini" else CLAUDE_MODELS
+
+    tier_priority = {"flagship": 0, "balanced": 1, "stable": 2, "fast": 3, "preview": 4}
+    models = []
+    for name, info in registry.items():
+        models.append({
+            "name": name,
+            "max_output_tokens": info.get("max_output_tokens", 0),
+            "context_window": info.get("context_window", 0),
+            "report_capable": info.get("report_capable", False),
+            "tier": info.get("tier", "unknown"),
+        })
+    models.sort(key=lambda m: (
+        tier_priority.get(m["tier"], 5),
+        -m["max_output_tokens"],
+    ))
+    return models
 
 
 def create_llm_client(
