@@ -298,12 +298,23 @@ No unofficial wrapper found for BMV stock disclosure data.
 
 | Market | Conclusion |
 |--------|-----------|
-| Canada (SEDAR+) | No PyPI package. SEDAR+ is relatively new. Gov API only. |
-| Singapore (SGX) | No PyPI package. SGX doesn't expose a free API. |
-| South Africa (JSE) | No PyPI package. JSE data behind paywall. |
-| Switzerland (SIX) | No PyPI package. SIX data behind paywall. |
-| UAE (DFM) | No PyPI package. DFM has limited free data. |
-| Saudi Arabia (Tadawul) | No PyPI package. Tadawul has limited free data. |
+| Canada (SEDAR+) | No PyPI package. No GitHub library with >15 stars. SEDAR+ is new, gov-API only. |
+| Singapore (SGX) | **singstat** (2.0.2) found for MACRO data (SingStat.gov.sg). No micro/disclosure wrapper. |
+| South Africa (JSE) | **jse-data-pipeline** (0.1.1) found -- "Production-grade JSE financial data ingestion pipeline". Early. |
+| Switzerland (SIX) | No PyPI package. No GitHub library. SIX data behind paywall. |
+| UAE (DFM) | No PyPI package. No GitHub library. DFM has limited free data. |
+| Saudi Arabia (Tadawul) | No PyPI package. GitHub: TadawulStocks (8 stars) -- minimalistic portfolio manager, not an API wrapper. |
+
+### Additional Markets Searched (NOT in current registry)
+
+| Market | PyPI | GitHub | Conclusion |
+|--------|------|--------|-----------|
+| Indonesia (IDX) | No package | Stock-Scrapper-IDX (10*), idx-indonesia-stock-exchange (0*) | GitHub scrapers only, no proper library |
+| Thailand (SET) | No package | No results | No wrapper available |
+| Malaysia (Bursa) | No package | No results | No wrapper available |
+| Poland (GPW) | No package | Not searched | No wrapper available |
+| Turkey (BIST) | No package | Not searched | No wrapper available |
+| Philippines (PSE) | No package | Not searched | No wrapper available |
 
 ---
 

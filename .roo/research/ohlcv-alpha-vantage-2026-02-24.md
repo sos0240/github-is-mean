@@ -1,5 +1,5 @@
 # Research Log: Alpha Vantage (OHLCV + News Sentiment)
-**Generated**: 2026-02-24T14:26:00Z
+**Generated**: 2026-02-24T15:40:00Z
 **Status**: Complete
 
 ---
@@ -10,35 +10,72 @@ No library -- direct HTTP to Alpha Vantage API.
 
 ---
 
-## 2. DOCUMENTATION SOURCES
+# =====================================================================
+# PART A: UNOFFICIAL COMMUNITY WRAPPER
+# =====================================================================
 
-### Primary Source -- Alpha Vantage API
-- **URL**: https://www.alphavantage.co/documentation/
-- **Verified**: 2026-02-24
-- **Key required**: Yes (free tier: register at alphavantage.co)
+**No unofficial wrapper library used.** Direct HTTP calls to Alpha Vantage REST API.
 
 ---
 
-## 3. WRAPPER CODE AUDIT
+# =====================================================================
+# PART B: GOVERNMENT/PUBLIC API -- Alpha Vantage
+# =====================================================================
 
-### 3a. OHLCV Provider (`ohlcv_provider.py`)
+## B1. Documentation Source
 
-| Method | Status | Issue |
-|--------|--------|-------|
-| `fetch_ohlcv()` | OK | `TIME_SERIES_DAILY` endpoint correct |
-| `_to_av_ticker()` | VERIFY | Suffix mappings may be outdated |
-| `_check_av_daily_limit()` | VERIFY | Free tier limit coded as 25/day |
-| OHLCV column parsing | OK | Maps AV JSON keys to standard names |
+**Source**: https://www.alphavantage.co/documentation/ (fetched 2026-02-24)
+**Key required**: Yes (free tier: register at alphavantage.co)
 
-### 3b. News Sentiment (`features/news_sentiment.py`)
+## B2. Verbatim -- TIME_SERIES_DAILY Endpoint (OHLCV)
 
-| Method | Status | Issue |
-|--------|--------|-------|
-| `_fetch_news_alpha_vantage()` | OK | `NEWS_SENTIMENT` endpoint verified in AV docs |
+**Source**: Alpha Vantage docs, used by `ohlcv_provider.py`
+```
+GET https://www.alphavantage.co/query
+Params:
+  function=TIME_SERIES_DAILY
+  symbol={ticker}
+  outputsize=full
+  apikey={key}
+```
 
-**Verified endpoint call**:
+Response keys (from our wrapper parsing):
 ```python
-# From news_sentiment.py -- VERIFIED against AV docs 2026-02-24
+# From ohlcv_provider.py
+"Time Series (Daily)": {
+    "2026-02-21": {
+        "1. open": "...",
+        "2. high": "...",
+        "3. low": "...",
+        "4. close": "...",
+        "5. volume": "..."
+    }
+}
+```
+
+## B3. Verbatim -- NEWS_SENTIMENT Endpoint
+
+**Source**: https://www.alphavantage.co/documentation/ (NEWS_SENTIMENT section, fetched 2026-02-24)
+```
+# COPIED VERBATIM FROM AV DOCS
+API Parameters
+  Required: function
+    The function of your choice. In this case, function=NEWS_SENTIMENT
+  Optional: tickers
+    The stock/crypto/forex symbols of your choice. For example:
+    tickers=IBM will filter for articles that mention the IBM ticker;
+    tickers=COIN,CRYPTO:BTC,FOREX:USD will filter for articles that
+    simultaneously mention Coinbase (COIN), Bitcoin (CRYPTO:BTC), and
+    US Dollar (FOREX:USD) in their content.
+  Optional: topics
+    The news topics of your choice. For example:
+    topics=technology will filter for articles that write about the
+    technology sector
+```
+
+**Used by**: `features/news_sentiment.py`
+```python
+# VERBATIM from news_sentiment.py _fetch_news_alpha_vantage()
 cached_get(
     "https://www.alphavantage.co/query",
     params={
@@ -49,12 +86,8 @@ cached_get(
     },
 )
 ```
-- `function=NEWS_SENTIMENT` -- confirmed in AV docs (Market News & Sentiment section)
-- `tickers` param -- correct (AV uses `tickers` not `symbol`)
-- `limit=200` -- valid parameter for number of articles
-- Response format: `data["feed"]` array with `title`, `time_published`, `summary` -- correct
 
-**Response parsing verified**:
+**Response parsing** (verbatim from news_sentiment.py):
 ```python
 feed = data.get("feed", [])
 for item in feed:
@@ -62,21 +95,20 @@ for item in feed:
     pub_date = item.get("time_published", "")   # AV format: YYYYMMDDTHHMMSS
     summary = item.get("summary", "")
 ```
-This matches Alpha Vantage's documented NEWS_SENTIMENT response schema.
 
-**Note**: NEWS_SENTIMENT shares the same daily rate limit with OHLCV (25 total).
-The `ohlcv_provider.py` tracks this limit, but `news_sentiment.py` does NOT
-decrement the shared counter. This could cause silent failures if both are
-called in the same session.
+## B4. Rate Limiting
 
-### Alpha Vantage Free Tier Limits
-- The wrapper codes 25 requests/day as `_AV_FREE_TIER_LIMIT = 25`
-- Current (2026): Free tier is 25 requests/day -- wrapper value is CORRECT
-- NEWS_SENTIMENT and TIME_SERIES_DAILY share the same limit
-- Premium tier: different limits apply
+**Source**: Alpha Vantage free tier documentation
+- Free tier: **25 requests per day** (shared across ALL endpoints)
+- Our wrapper codes this as `_AV_FREE_TIER_LIMIT = 25` in `ohlcv_provider.py`
+- **FIX APPLIED**: `news_sentiment.py` now shares the daily counter via
+  `_check_av_daily_limit()` and `_increment_av_counter()`
 
-### Ticker Suffix Mappings (OHLCV only)
+## B5. Ticker Suffix Mappings
+
+**Source**: ohlcv_provider.py (verified against Alpha Vantage symbol format)
 ```python
+# VERBATIM from ohlcv_provider.py
 _AV_SUFFIX = {
     "us_sec_edgar": "",           # AAPL
     "uk_companies_house": ".LON", # BP.LON
@@ -87,28 +119,26 @@ _AV_SUFFIX = {
     "cl_cmf": ".SNX",             # SQM.SNX
 }
 ```
-Note: NEWS_SENTIMENT uses bare tickers (e.g., "AAPL") without exchange suffixes.
+**Note**: NEWS_SENTIMENT uses bare tickers without exchange suffixes.
 
-### Canonical Field Coverage
+## B6. Canonical Field Coverage
+
 - **OHLCV**: date, open, high, low, close, volume -- ALL COVERED
-- **adjusted_close**: Available from AV but may need premium tier
 - **News Sentiment**: title, publishedDate, summary -- ALL COVERED
 
 ---
 
-## 4. REQUIRED FIXES
+# =====================================================================
+# PART C: SUMMARY
+# =====================================================================
 
-1. **MINOR**: News sentiment does not decrement the shared AV daily call counter.
-   If both OHLCV and news are fetched in the same session, the counter in
-   `ohlcv_provider.py` may undercount, potentially exceeding the 25/day limit.
-2. **NONE critical** -- both endpoints and response parsing are correct
+| Endpoint | Used By | Status |
+|----------|---------|--------|
+| TIME_SERIES_DAILY | ohlcv_provider.py | OK -- endpoint verified |
+| NEWS_SENTIMENT | features/news_sentiment.py | OK -- endpoint verified from AV docs |
 
----
-
-## 5. IMPLEMENTATION READINESS
-
-### Recommendation
-- READY TO IMPLEMENT -- endpoints verified, response parsing correct
+### Fixes Applied
+1. Shared rate limit counter between OHLCV and NEWS_SENTIMENT
 
 ---
 
