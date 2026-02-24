@@ -1186,6 +1186,63 @@ Non-interactive examples:
         else:
             logger.info("Step 5e: Skipped (--skip-linked)")
 
+    # Step 5h: Peer percentile ranking (requires linked caches)
+    peer_ranking_result = None
+    if linked_caches:
+        try:
+            from operator1.features.peer_ranking import compute_peer_ranking
+            cache, _pr_result = compute_peer_ranking(
+                cache, linked_caches=linked_caches,
+            )
+            peer_ranking_result = {
+                "n_peers": _pr_result.n_peers,
+                "n_variables_ranked": _pr_result.n_variables_ranked,
+                "latest_composite_rank": _pr_result.latest_composite_rank,
+                "latest_label": _pr_result.latest_label,
+                "variable_ranks": _pr_result.variable_ranks,
+            }
+            logger.info(
+                "Peer ranking: rank=%.1f (%s), %d peers, %d variables",
+                _pr_result.latest_composite_rank
+                if not pd.isna(_pr_result.latest_composite_rank) else 0.0,
+                _pr_result.latest_label,
+                _pr_result.n_peers,
+                _pr_result.n_variables_ranked,
+            )
+        except Exception as exc:
+            logger.warning("Peer ranking failed: %s", exc)
+
+    # Step 5i: News sentiment scoring (uses LLM for AI scoring, keyword fallback)
+    sentiment_result = None
+    try:
+        from operator1.features.news_sentiment import compute_news_sentiment
+        cache, _sent_result = compute_news_sentiment(
+            cache,
+            gemini_client=llm_client,
+            symbol=ticker,
+        )
+        if _sent_result.n_articles_scored > 0:
+            sentiment_result = {
+                "n_articles_fetched": _sent_result.n_articles_fetched,
+                "n_articles_scored": _sent_result.n_articles_scored,
+                "scoring_method": _sent_result.scoring_method,
+                "mean_sentiment": _sent_result.mean_sentiment,
+                "latest_sentiment": _sent_result.latest_sentiment,
+                "latest_label": _sent_result.latest_label,
+            }
+            logger.info(
+                "Sentiment: %s (%.3f), %d articles scored via %s",
+                _sent_result.latest_label,
+                _sent_result.latest_sentiment
+                if not pd.isna(_sent_result.latest_sentiment) else 0.0,
+                _sent_result.n_articles_scored,
+                _sent_result.scoring_method,
+            )
+        else:
+            logger.info("Sentiment: no articles available for scoring")
+    except Exception as exc:
+        logger.warning("News sentiment scoring failed: %s", exc)
+
     # ------------------------------------------------------------------
     # Step 6: Temporal modeling (optional)
     # ------------------------------------------------------------------
@@ -1631,8 +1688,8 @@ Non-interactive examples:
                 else None
             ),
             financial_health_result=fh_dict,
-            sentiment_result=None,
-            peer_ranking_result=None,
+            sentiment_result=sentiment_result,
+            peer_ranking_result=peer_ranking_result,
             macro_quadrant_result=_to_dict(macro_quadrant_result),
         )
 
