@@ -104,6 +104,74 @@ def _sentiment_label(score: float) -> str:
 
 
 # ---------------------------------------------------------------------------
+# News fetchers (free APIs)
+# ---------------------------------------------------------------------------
+
+
+def _fetch_news_alpha_vantage(symbol: str) -> pd.DataFrame:
+    """Fetch stock news from Alpha Vantage NEWS_SENTIMENT endpoint (free).
+
+    Alpha Vantage provides a news/sentiment endpoint that returns recent
+    news articles with titles, summaries, and dates.  Free tier: 25 req/day
+    (shared with OHLCV).  No separate API key needed -- uses the same
+    ALPHA_VANTAGE_API_KEY from secrets.
+
+    Returns a DataFrame with at minimum ``title`` and ``publishedDate``
+    columns, or an empty DataFrame on failure.
+    """
+    import os
+
+    api_key = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
+    if not api_key:
+        logger.debug("No ALPHA_VANTAGE_API_KEY -- cannot fetch news")
+        return pd.DataFrame()
+
+    try:
+        from operator1.http_utils import cached_get
+        data = cached_get(
+            "https://www.alphavantage.co/query",
+            params={
+                "function": "NEWS_SENTIMENT",
+                "tickers": symbol,
+                "limit": 200,
+                "apikey": api_key,
+            },
+        )
+        if not isinstance(data, dict):
+            return pd.DataFrame()
+
+        # Check for errors
+        if "Error Message" in data or "Note" in data:
+            logger.debug("Alpha Vantage news error: %s", data.get("Error Message", data.get("Note", "")))
+            return pd.DataFrame()
+
+        feed = data.get("feed", [])
+        if not feed:
+            return pd.DataFrame()
+
+        rows = []
+        for item in feed:
+            title = item.get("title", "")
+            pub_date = item.get("time_published", "")
+            summary = item.get("summary", "")
+            if title:
+                rows.append({
+                    "title": title,
+                    "publishedDate": pub_date[:10] if len(pub_date) >= 10 else pub_date,
+                    "summary": summary,
+                })
+
+        if rows:
+            df = pd.DataFrame(rows)
+            logger.info("Alpha Vantage news: %d articles for %s", len(df), symbol)
+            return df
+    except Exception as exc:
+        logger.debug("Alpha Vantage news fetch failed: %s", exc)
+
+    return pd.DataFrame()
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -145,17 +213,20 @@ def compute_news_sentiment(
 
     result = SentimentResult()
 
-    # Step 1: Fetch news (1 API call)
+    # Step 1: Fetch news
+    # Priority: pre-fetched > Alpha Vantage (free) > legacy FMP > empty
     if news_df is not None:
         articles = news_df.copy()
-    elif _legacy_fmp_client is not None and symbol:
-        try:
-            articles = _legacy_fmp_client.get_stock_news(symbol, limit=1000)
-        except Exception as exc:
-            logger.warning("Failed to fetch news: %s", exc)
-            articles = pd.DataFrame()
+    elif symbol:
+        articles = _fetch_news_alpha_vantage(symbol)
+        if articles.empty and _legacy_fmp_client is not None:
+            try:
+                articles = _legacy_fmp_client.get_stock_news(symbol, limit=1000)
+            except Exception as exc:
+                logger.warning("FMP news fetch failed: %s", exc)
+                articles = pd.DataFrame()
     else:
-        logger.warning("No FMP client or symbol for sentiment -- skipping")
+        logger.warning("No symbol for sentiment -- skipping news fetch")
         articles = pd.DataFrame()
 
     if articles.empty or "title" not in articles.columns:
