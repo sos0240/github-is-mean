@@ -1,114 +1,151 @@
 # Research Log: UK Companies House
-**Generated**: 2026-02-24T14:24:00Z
+**Generated**: 2026-02-24T14:37:00Z
 **Status**: Complete
 
 ---
 
 ## 1. VERSION INFORMATION
 
-| Component | Current (in requirements.txt) | Latest Available | Action Required |
-|-----------|-------------------------------|------------------|-----------------|
-| (no library) | N/A -- direct HTTP | N/A | N/A |
-
 No unofficial wrapper library used. Direct REST API calls only.
 
 ---
 
-## 2. DOCUMENTATION SOURCES
+# =====================================================================
+# PART A: UNOFFICIAL COMMUNITY WRAPPER
+# =====================================================================
 
-### Primary Source -- Companies House REST API (Government API)
-- **URL**: https://developer-specs.company-information.service.gov.uk/
-- **Verified**: 2026-02-24 (via repo doc `company's house Api doc`)
-- **Key required**: Yes (free registration)
+**Not applicable** -- this wrapper uses the government API directly.
+No community wrapper library is used.
 
 ---
 
-## 3. VERBATIM CODE SNIPPETS
+# =====================================================================
+# PART B: GOVERNMENT API -- Companies House REST API
+# =====================================================================
 
-### 3a. Authentication Pattern
-**Source**: company's house Api doc in repo
+## B1. Documentation Source
+
+**Source**: `company's house Api doc` in repo root (from developer.company-information.service.gov.uk)
+
+## B2. Verbatim Overview
+
+**Source**: company's house Api doc, lines 1-6
 ```
-# Basic auth with API key (key as username, empty password)
-Authorization: Basic base64encode("{api_key}:")
+# COPIED VERBATIM
+Companies House is an executive agency of the Department for Business and Trade.
+The Companies House API lets you retrieve information about limited companies
+(and other companies that fall within the Companies Act 2006). The data returned
+is live and real-time, and is simple to use and understand.
 ```
 
-### 3b. Key Endpoints
+## B3. Verbatim Authentication
+
+**Source**: company's house Api doc, lines 23-26
 ```
-GET /search/companies?q={query}&items_per_page=20
-GET /company/{company_number}
-GET /company/{company_number}/filing-history?category=accounts
-GET /company/{company_number}/officers
-GET /advanced-search/companies?sic_codes={sic}
+# COPIED VERBATIM
+API authentication
+Access to API services requires authentication. The Companies House API requires
+API authentication credentials to be sent with each request, which is sent as an
+API key, stream key or OAuth access token.
 ```
 
+**Implementation** (from our wrapper):
+```python
+# Basic auth with API key as username, empty password
+import base64
+encoded = base64.b64encode(f"{api_key}:".encode()).decode()
+headers["Authorization"] = f"Basic {encoded}"
+```
+
+## B4. Verbatim Endpoint Specifications
+
+**Source**: company's house Api doc + Companies House developer specs
+
+### Company Search:
+```
+GET https://api.company-information.service.gov.uk/search/companies?q={query}&items_per_page=20
+```
+
+### Company Profile:
+```
+GET https://api.company-information.service.gov.uk/company/{company_number}
+Response fields: company_name, company_status, type, sic_codes[], date_of_creation
+```
+
+### Filing History (Accounts):
+```
+GET https://api.company-information.service.gov.uk/company/{company_number}/filing-history?category=accounts&items_per_page=20
+Response fields per item: date, description, action_date, type, transaction_id
+```
+
+### Officers:
+```
+GET https://api.company-information.service.gov.uk/company/{company_number}/officers
+Response fields per item: name, officer_role, appointed_on
+```
+
+### Advanced Search (Peers by SIC):
+```
+GET https://api.company-information.service.gov.uk/advanced-search/companies?sic_codes={sic}&size=10&company_status=active
+```
+
+## B5. CRITICAL DATA GAP
+
+**The Companies House REST API does NOT return financial line items in any endpoint.**
+
+The filing-history endpoint returns:
+- `date`: filing date
+- `description`: text description (e.g., "accounts-with-accounts-type-full")
+- `action_date`: period end date
+- `type`: document type code
+- `transaction_id`: reference for document download
+
+But it does NOT return: revenue, total_assets, net_income, or ANY numerical financial data.
+
+**Financial data is stored inside iXBRL documents** attached to filed accounts.
+To extract actual numbers, the wrapper would need to:
+1. Call `GET /company/{id}/filing-history/{transaction_id}/document` to get the iXBRL file
+2. Parse the iXBRL/XHTML to extract tagged financial values
+3. Map iXBRL tags to canonical field names
+
+**This is not implemented in our wrapper.** The `_fetch_financials_from_filings()` method
+only returns filing metadata (dates, form types) with zero financial values.
+
+## B6. Breaking Changes
+
+None -- Companies House REST API endpoints remain stable.
+
+## B7. Audit of Our Wrapper
+
+| Method | Endpoint | Matches docs? | Returns correct data? |
+|--------|----------|---------------|----------------------|
+| `list_companies()` | `/search/companies` | YES | YES (name, company_number) |
+| `get_profile()` | `/company/{id}` | YES | YES (name, status, sic_codes) |
+| `_fetch_financials_from_filings()` | `/company/{id}/filing-history` | YES (endpoint) | NO -- returns metadata only, no financial values |
+| `get_peers()` | `/advanced-search/companies` | YES | YES (company_numbers by SIC) |
+| `get_executives()` | `/company/{id}/officers` | YES | YES (name, role, appointed_on) |
+
 ---
 
-## 4. BREAKING CHANGES ANALYSIS
+# =====================================================================
+# PART C: AUDIT RESULTS SUMMARY
+# =====================================================================
 
-### Government API -- No breaking changes detected
-- Companies House REST API endpoints remain stable
-- Authentication still Basic auth with API key
+| Mode | Component | Status | Issue |
+|------|-----------|--------|-------|
+| Government (only) | api.company-information.service.gov.uk | DOCUMENTED GAP | Financial extraction returns no actual numbers |
 
----
+### What Works
+- Company search, profile, officers, peers -- all correct
+- Filing history dates and form types -- correct
 
-## 5. WRAPPER CODE AUDIT
-
-### Mode 1: No unofficial wrapper -- this wrapper uses gov API directly
-
-### Mode 2: Direct Gov API -- PRIMARY AND ONLY MODE
-
-| Method | Status | Issue |
-|--------|--------|-------|
-| `list_companies()` | OK | `/search/companies` endpoint correct |
-| `get_profile()` | OK | `/company/{id}` endpoint correct |
-| `_fetch_financials_from_filings()` | **MAJOR GAP** | Only extracts filing METADATA, no actual financial numbers |
-| `get_peers()` | OK | `/advanced-search/companies` correct |
-| `get_executives()` | OK | `/company/{id}/officers` correct |
-
-### CRITICAL ISSUE: Financial Data Extraction
-
-The `_fetch_financials_from_filings()` method only returns filing dates, descriptions, and form types.
-It does NOT extract any actual financial values (revenue, assets, etc.).
-
-The DataFrame it returns has columns: `filing_date`, `report_date`, `form`, `description`,
-`transaction_id`, `period_type` -- but NO financial line items.
-
-This means the canonical translator receives empty financial data for UK companies.
-
-**Root cause**: Companies House REST API stores financial data inside iXBRL documents
-(attachments to filings). The wrapper would need to:
-1. Download the iXBRL document via `/company/{id}/filing-history/{transaction_id}/document`
-2. Parse the iXBRL/XHTML to extract financial values
-3. Map to canonical fields
-
-This is a known limitation noted in the wrapper docstring ("iXBRL document parsing for
-financial data") but is not actually implemented.
-
-### Canonical Field Coverage
-- **Profile fields**: name, ticker, country, sector, industry, exchange, currency -- COVERED
-- **Income statement**: NONE (all missing)
-- **Balance sheet**: NONE (all missing)
-- **Cash flow**: NONE (all missing)
-- **PIT columns**: filing_date, report_date -- present but no financial data alongside
-
----
-
-## 6. REQUIRED FIXES
-
-1. **MAJOR**: The financial extraction returns only metadata, no numbers.
-   This is an architectural limitation requiring iXBRL parsing.
-   Recommended: Add a comment documenting this limitation explicitly, and ensure
-   the fallback to the original `companies_house.py` direct client works.
-2. **MINOR**: Verify the original `companies_house.py` direct client also has this issue.
-
----
-
-## 7. IMPLEMENTATION READINESS
+### What Does NOT Work
+- Income statement data -- returns empty (no iXBRL parsing)
+- Balance sheet data -- returns empty (no iXBRL parsing)
+- Cash flow data -- returns empty (no iXBRL parsing)
 
 ### Recommendation
-- **HUMAN REVIEW NEEDED** -- Financial data extraction is fundamentally incomplete.
-  UK companies will have profile data but zero financial statements.
-  This requires iXBRL parsing implementation or an alternative data source.
+- **HUMAN REVIEW NEEDED** -- Financial data extraction requires iXBRL parsing implementation
 
 ---
 
