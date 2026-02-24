@@ -500,6 +500,40 @@ def _build_linked_entities_section(profile: dict[str, Any]) -> str:
     if not linked.get("available"):
         return "Linked entity analysis unavailable."
 
+    # Map code-style metric suffixes to human-readable labels
+    _METRIC_LABELS: dict[str, str] = {
+        "avg_return_1d": "Avg Daily Return",
+        "median_return_1d": "Median Daily Return",
+        "avg_volatility_21d": "Avg 21-Day Volatility",
+        "median_volatility_21d": "Median 21-Day Volatility",
+        "avg_drawdown_252d": "Avg Max Drawdown (1Y)",
+        "median_drawdown_252d": "Median Max Drawdown (1Y)",
+        "avg_current_ratio": "Avg Current Ratio",
+        "median_current_ratio": "Median Current Ratio",
+        "avg_debt_to_equity_abs": "Avg Debt-to-Equity",
+        "median_debt_to_equity_abs": "Median Debt-to-Equity",
+        "avg_free_cash_flow": "Avg Free Cash Flow",
+        "median_free_cash_flow": "Median Free Cash Flow",
+        "avg_fcf_yield": "Avg FCF Yield",
+        "median_fcf_yield": "Median FCF Yield",
+        "avg_gross_margin": "Avg Gross Margin",
+        "median_gross_margin": "Median Gross Margin",
+        "avg_operating_margin": "Avg Operating Margin",
+        "median_operating_margin": "Median Operating Margin",
+        "avg_net_margin": "Avg Net Margin",
+        "median_net_margin": "Median Net Margin",
+        "avg_roe": "Avg Return on Equity",
+        "median_roe": "Median Return on Equity",
+        "avg_pe_ratio_calc": "Avg P/E Ratio",
+        "median_pe_ratio_calc": "Median P/E Ratio",
+        "avg_ev_to_ebitda": "Avg EV/EBITDA",
+        "median_ev_to_ebitda": "Median EV/EBITDA",
+        "avg_enterprise_value": "Avg Enterprise Value",
+        "median_enterprise_value": "Median Enterprise Value",
+        "avg_market_cap": "Avg Market Cap",
+        "median_market_cap": "Median Market Cap",
+    }
+
     n_groups = linked.get("n_groups", 0)
     groups = linked.get("groups", {})
 
@@ -508,11 +542,14 @@ def _build_linked_entities_section(profile: dict[str, Any]) -> str:
     for group_name, metrics in sorted(groups.items()):
         lines.append(f"### {group_name.replace('_', ' ').title()}")
         lines.append("")
+        if metrics:
+            lines.append("| Metric | Latest | Mean |")
+            lines.append("|--------|--------|------|")
         for metric_name, stats in sorted(metrics.items()):
             if isinstance(stats, dict) and "latest" in stats:
+                label = _METRIC_LABELS.get(metric_name, metric_name.replace("_", " ").title())
                 lines.append(
-                    f"- {metric_name}: latest={_fmt(stats.get('latest'))}, "
-                    f"mean={_fmt(stats.get('mean'))}"
+                    f"| {label} | {_fmt(stats.get('latest'))} | {_fmt(stats.get('mean'))} |"
                 )
         lines.append("")
 
