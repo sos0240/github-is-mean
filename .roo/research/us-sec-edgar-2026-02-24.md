@@ -292,4 +292,49 @@ All canonical fields covered in both modes:
 
 ---
 
+
+# =====================================================================
+# PART D: OHLCV & MACRO COVERAGE (added 2026-02-24)
+# =====================================================================
+
+## D1. OHLCV Price Data
+
+**Primary**: yfinance 1.2.0 (global, no API key, 21.7k stars)
+**Research log**: `.roo/research/ohlcv-yfinance-2026-02-24.md`
+
+```python
+# VERBATIM from yfinance source -- fetch United States OHLCV
+import yfinance as yf
+df = yf.download(
+    "AAPL",     # United States ticker with "(none)" suffix
+    period="5y",
+    auto_adjust=False,      # raw/unadjusted OHLCV (PIT-safe)
+    progress=False,
+)
+# Returns: DataFrame(Open, High, Low, Close, Adj Close, Volume)
+```
+
+**Ticker suffix for United States**: `(none)`
+**Example**: `AAPL`
+**Notes**: yfinance primary.
+
+## D2. Macro Economic Data
+
+**Primary**: wbgapi 1.0.13 (World Bank, 200+ countries, no API key)
+**Research log**: `.roo/research/macro-wbgapi-2026-02-24.md`
+
+```python
+# VERBATIM from wbgapi source -- fetch United States macro indicators
+import wbgapi as wb
+df = wb.data.DataFrame(
+    ["NY.GDP.MKTP.KD.ZG", "FP.CPI.TOTL.ZG", "SL.UEM.TOTL.ZS"],
+    economy="USA",    # United States World Bank code
+    mrv=10,                 # most recent 10 years
+    numericTimeKeys=True,
+)
+# Returns: DataFrame with GDP growth, inflation, unemployment
+```
+
+**World Bank code for United States**: `USA`
+
 **END OF RESEARCH LOG**
