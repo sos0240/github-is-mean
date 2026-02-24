@@ -1224,12 +1224,20 @@ Non-interactive examples:
         from operator1.models.monte_carlo import run_monte_carlo
         from operator1.models.prediction_aggregator import run_prediction_aggregation
 
-        # Collect injected feature columns for temporal model learning
+        # Collect injected feature columns for temporal model learning.
+        # Include linked aggregate columns (competitors_avg_*, suppliers_median_*,
+        # etc.) so that temporal models can learn from cross-entity signals.
+        _linked_prefixes = (
+            "competitors_", "suppliers_", "customers_",
+            "financial_institutions_", "sector_peers_", "industry_peers_",
+        )
         _extra_vars = [
             c for c in cache.columns
             if (c.startswith("fh_") or c.startswith("sentiment_")
-                or c.startswith("peer_") or c.startswith("macro_"))
+                or c.startswith("peer_") or c.startswith("macro_")
+                or any(c.startswith(p) for p in _linked_prefixes))
             and cache[c].dtype in ("float64", "float32", "int64")
+            and not c.startswith("is_missing_")
         ]
         if _extra_vars:
             logger.info("Extra variables for temporal models (%d): %s", len(_extra_vars), _extra_vars[:10])
