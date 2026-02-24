@@ -423,50 +423,20 @@ def _build_financial_health(profile: dict[str, Any]) -> str:
     else:
         lines.append("Risk tier allocation data unavailable.")
 
-    # Vanity Assessment
-    lines.extend(["", "### Capital Allocation Efficiency (Vanity Assessment)", ""])
+    # Capital Allocation Quality (brief summary -- detail in premium section 19)
+    lines.extend(["", "### Capital Allocation Quality", ""])
 
     if vanity.get("v2_available"):
-        # V2 composite score
         v2_score = vanity.get("v2_score", {})
-        lines.append(f"- **Capital discipline score**: {_fmt(v2_score.get('latest'), '.1f')} / 100")
-        lines.append(f"- **Assessment**: {vanity.get('v2_label', 'N/A')}")
-        lines.append(f"- **Trend**: {vanity.get('v2_trend', 'N/A')}")
-        lines.append(f"- **21-day average**: {_fmt(vanity.get('v2_score_21d', {}).get('mean'), '.1f')}")
-        lines.append("")
-
-        # Component breakdown
-        breakdown = vanity.get("v2_breakdown", {})
-        _component_labels = {
-            "vanity_rnd_mismatch": "R&D vs Growth Mismatch",
-            "vanity_sga_bloat_v2": "SGA Bloat (peer-relative)",
-            "vanity_capital_misallocation": "Capital Misallocation",
-            "vanity_competitive_decay": "Competitive Decay",
-            "vanity_sentiment_gap": "Sentiment-Reality Gap",
-        }
-        if breakdown:
-            lines.append("**Component Breakdown:**")
-            lines.append("")
-            for comp_key, comp_label in _component_labels.items():
-                val = breakdown.get(comp_key)
-                lines.append(f"- {comp_label}: {_fmt(val, '.1f')} / 100")
-            lines.append("")
-
-        lines.append("*Lower scores indicate more disciplined capital allocation. "
-                     "Scores above 40 suggest potential misallocation; above 70 "
-                     "indicates significant wasteful spending patterns.*")
-
+        lines.append(
+            f"- **Management discipline rating**: {vanity.get('v2_label', 'N/A')} "
+            f"({_fmt(v2_score.get('latest'), '.1f')} / 100)"
+        )
+        lines.append(f"- **Direction**: {vanity.get('v2_trend', 'N/A')}")
     elif vanity.get("available"):
-        # Legacy fallback
-        lines.append(f"- **Current period vanity expenditure**: {_fmt(vanity.get('latest'), '.1f')}% of revenue")
-        lines.append(f"- **Historical average**: {_fmt(vanity.get('mean'), '.1f')}%")
-        lines.append(f"- **Peak**: {_fmt(vanity.get('max'), '.1f')}%")
-        lines.append("")
-        lines.append("Vanity expenditure includes executive compensation excess, "
-                     "SG&A bloat vs industry median, share buybacks during negative free cash flow, "
-                     "and marketing spend during survival mode.")
+        lines.append(f"- **Non-productive expenditure ratio**: {_fmt(vanity.get('latest'), '.1f')}% of revenue")
     else:
-        lines.append("Vanity percentage data unavailable.")
+        lines.append("Capital allocation quality data unavailable.")
 
     if not lines:
         return "Financial health data unavailable."
@@ -2019,6 +1989,105 @@ def _build_advanced_insights(profile: dict[str, Any]) -> str:
                         "(e.g., Kalman dominates for liquidity prediction, "
                         "deep learning for growth forecasting).*")
             lines.append("")
+
+    # Capital Allocation Deep Dive (premium-only detailed breakdown)
+    vanity = profile.get("vanity", {})
+    if vanity.get("v2_available"):
+        v2_score = vanity.get("v2_score", {})
+        lines.append("### Capital Allocation & Management Discipline Assessment")
+        lines.append("")
+        lines.append(
+            "This proprietary scoring framework evaluates management's capital "
+            "allocation effectiveness by examining five dimensions of corporate "
+            "financial behavior. Each dimension is scored from 0 (highly disciplined) "
+            "to 100 (significant misallocation), with the composite providing an "
+            "overall assessment of management stewardship quality."
+        )
+        lines.append("")
+        lines.append(
+            f"- **Composite discipline score**: {_fmt(v2_score.get('latest'), '.1f')} / 100 "
+            f"({vanity.get('v2_label', 'N/A')})"
+        )
+        lines.append(f"- **21-day moving average**: {_fmt(vanity.get('v2_score_21d', {}).get('mean'), '.1f')}")
+        lines.append(f"- **Historical range**: {_fmt(v2_score.get('min'), '.1f')} -- "
+                     f"{_fmt(v2_score.get('max'), '.1f')}")
+        lines.append(f"- **Trend**: {vanity.get('v2_trend', 'N/A')}")
+        lines.append("")
+
+        breakdown = vanity.get("v2_breakdown", {})
+        _dim_labels = {
+            "vanity_rnd_mismatch": (
+                "Innovation Efficiency",
+                "Evaluates whether R&D expenditure is generating returns. A high "
+                "score indicates sustained research spending without corresponding "
+                "revenue growth -- a potential signal of undisciplined innovation "
+                "investment or strategic misalignment.",
+            ),
+            "vanity_sga_bloat_v2": (
+                "Operating Cost Efficiency",
+                "Measures SG&A expense relative to sector peers, adjusted for "
+                "margin trajectory. Elevated overhead costs combined with "
+                "compressing margins may indicate managerial bloat or an "
+                "unsustainable cost structure.",
+            ),
+            "vanity_capital_misallocation": (
+                "Balance Sheet Stewardship",
+                "Assesses whether leverage decisions align with the company's "
+                "liquidity position. Flags include debt accumulation during "
+                "liquidity deterioration and shareholder distributions while "
+                "solvency metrics are under stress.",
+            ),
+            "vanity_competitive_decay": (
+                "Competitive Position Erosion",
+                "Quantifies the divergence between perceived market standing and "
+                "actual competitive performance. Rising competitive pressure "
+                "alongside declining peer rankings and margin compression may "
+                "indicate a deteriorating moat.",
+            ),
+            "vanity_sentiment_gap": (
+                "Market Narrative Divergence",
+                "Measures the gap between market sentiment (news flow, analyst "
+                "coverage) and underlying financial trajectory. A positive "
+                "narrative accompanying declining fundamental health scores "
+                "warrants additional due diligence.",
+            ),
+        }
+
+        if breakdown:
+            lines.append("| Dimension | Score | Assessment |")
+            lines.append("|-----------|-------|------------|")
+            for comp_key, (dim_name, _description) in _dim_labels.items():
+                val = breakdown.get(comp_key)
+                if val is not None and not (isinstance(val, float) and val != val):
+                    if val <= 20:
+                        assessment = "Disciplined"
+                    elif val <= 40:
+                        assessment = "Adequate"
+                    elif val <= 70:
+                        assessment = "Elevated concern"
+                    else:
+                        assessment = "Material risk"
+                    lines.append(f"| {dim_name} | {_fmt(val, '.1f')} | {assessment} |")
+                else:
+                    lines.append(f"| {dim_name} | N/A | Insufficient data |")
+            lines.append("")
+
+            # Detailed descriptions for each dimension
+            lines.append("**Dimension Definitions:**")
+            lines.append("")
+            for comp_key, (dim_name, description) in _dim_labels.items():
+                lines.append(f"- **{dim_name}**: {description}")
+            lines.append("")
+
+        lines.append(
+            "*Interpretation guide: Scores below 20 reflect strong capital "
+            "discipline characteristic of well-managed businesses. Scores between "
+            "20 and 40 are typical of companies with adequate but not exceptional "
+            "stewardship. Scores exceeding 40 warrant closer scrutiny of "
+            "management decisions, and scores above 70 represent material "
+            "capital allocation risk that may impair long-term shareholder value.*"
+        )
+        lines.append("")
 
     if not lines:
         return "*No advanced quantitative models were run for this analysis.*"
