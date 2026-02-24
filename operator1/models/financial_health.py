@@ -271,9 +271,15 @@ def _score_solvency(cache: pd.DataFrame) -> pd.Series:
     """
     components: list[pd.Series] = []
 
-    if "debt_to_equity" in cache.columns:
+    # derived_variables.py creates debt_to_equity_abs (not debt_to_equity)
+    _de_col = next(
+        (c for c in ("debt_to_equity_abs", "debt_to_equity_signed", "debt_to_equity")
+         if c in cache.columns),
+        None,
+    )
+    if _de_col is not None:
         components.append(
-            _normalize_series(cache["debt_to_equity"], invert=True)
+            _normalize_series(cache[_de_col], invert=True)
         )
 
     if "net_debt_to_ebitda" in cache.columns:

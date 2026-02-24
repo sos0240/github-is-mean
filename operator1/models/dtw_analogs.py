@@ -208,7 +208,7 @@ def find_historical_analogs(
     if variables is None:
         candidates = [
             "close", "return_1d", "volatility_21d", "volume",
-            "debt_to_equity", "current_ratio", "cash_ratio",
+            "debt_to_equity_abs", "current_ratio", "cash_ratio",
             "free_cash_flow_ttm_asof", "gross_margin", "operating_margin",
         ]
         variables = [v for v in candidates if v in cache.columns]

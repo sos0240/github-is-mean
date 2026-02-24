@@ -162,7 +162,7 @@ def _run_copula_impl(
     if variables is None:
         # Pick representative variables across tiers
         candidates = [
-            "cash_ratio", "debt_to_equity", "volatility_21d",
+            "cash_ratio", "debt_to_equity_abs", "volatility_21d",
             "gross_margin", "pe_ratio_calc", "return_1d",
             "free_cash_flow_ttm_asof", "drawdown_252d",
         ]

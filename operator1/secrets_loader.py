@@ -129,7 +129,8 @@ def load_secrets() -> dict[str, str]:
     for key in _OPTIONAL_KEYS:
         if not secrets.get(key):
             label = {
-                "GEMINI_API_KEY": "report generation",
+                "GEMINI_API_KEY": "report generation (Gemini)",
+                "ANTHROPIC_API_KEY": "report generation (Claude)",
                 "COMPANIES_HOUSE_API_KEY": "UK market",
                 "DART_API_KEY": "South Korea market",
                 "FRED_API_KEY": "US macro data",
@@ -137,6 +138,7 @@ def load_secrets() -> dict[str, str]:
                 "KOSIS_API_KEY": "Korea macro data",
                 "INSEE_API_KEY": "France macro data",
                 "BCCH_API_KEY": "Chile macro data",
+                "ALPHA_VANTAGE_API_KEY": "OHLCV price data",
             }.get(key, "specific features")
             logger.info(
                 "Optional key %s not set (needed for %s).",

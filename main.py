@@ -848,7 +848,7 @@ Non-interactive examples:
                         "Macro quadrant: %s (growth_trend=%.2f, %d days classified)",
                         macro_quadrant_result.current_quadrant,
                         macro_quadrant_result.growth_trend
-                        if not (macro_quadrant_result.growth_trend != macro_quadrant_result.growth_trend)
+                        if not pd.isna(macro_quadrant_result.growth_trend)
                         else 0.0,
                         macro_quadrant_result.n_days_classified,
                     )
@@ -988,6 +988,8 @@ Non-interactive examples:
     relationships = {}
     graph_risk_result = None
     game_theory_result = None
+    linked_caches: dict[str, pd.DataFrame] = {}
+    linked_agg_df: pd.DataFrame | None = None
 
     # Build the LLM client once for the whole pipeline
     from operator1.clients.llm_factory import create_llm_client
@@ -1048,11 +1050,198 @@ Non-interactive examples:
             )
         except Exception as exc:
             logger.warning("Game theory analysis failed: %s", exc)
+        # Step 5f: Fetch financial data for linked entities
+        if relationships:
+            logger.info("")
+            logger.info("Step 5f: Fetching linked entity data...")
+
+            _MAX_LINKED_ENTITIES = 10  # cap to stay within API budgets
+
+            # Flatten all entities from discovery result
+            _all_linked: list[dict] = []
+            _entity_groups: dict[str, list[str]] = {}
+            for group_name, group_entities in relationships.items():
+                group_ids: list[str] = []
+                if isinstance(group_entities, list):
+                    for ent in group_entities:
+                        ent_id = ""
+                        if hasattr(ent, "isin") and ent.isin:
+                            ent_id = ent.isin
+                        elif hasattr(ent, "ticker") and ent.ticker:
+                            ent_id = ent.ticker
+                        elif isinstance(ent, dict):
+                            ent_id = ent.get("isin", "") or ent.get("ticker", "")
+                        if ent_id and ent_id not in {e.get("id") for e in _all_linked}:
+                            _all_linked.append({
+                                "id": ent_id,
+                                "name": getattr(ent, "name", "") if hasattr(ent, "name") else ent.get("name", ""),
+                                "group": group_name,
+                            })
+                            group_ids.append(ent_id)
+                _entity_groups[group_name] = group_ids
+
+            # Cap total entities
+            _all_linked = _all_linked[:_MAX_LINKED_ENTITIES]
+
+            def _fetch_linked_entity(ent_info: dict) -> tuple[str, pd.DataFrame]:
+                """Fetch and build daily cache for one linked entity."""
+                ent_id = ent_info["id"]
+                try:
+                    # Fetch financial statements
+                    _inc = pit_client.get_income_statement(ent_id)
+                    _bal = pit_client.get_balance_sheet(ent_id)
+                    _cf = pit_client.get_cashflow_statement(ent_id)
+                    _qt = pit_client.get_quotes(ent_id)
+
+                    # Build minimal daily cache (OHLCV spine + ffill statements)
+                    if not _qt.empty and "date" in _qt.columns:
+                        _qt["date"] = pd.to_datetime(_qt["date"])
+                        _ent_cache = _qt.set_index("date").sort_index()
+                    else:
+                        _ent_cache = pd.DataFrame(
+                            index=pd.date_range(
+                                cache.index[0], cache.index[-1], freq="B", name="date"
+                            )
+                        )
+
+                    # Merge statements (same logic as target cache, simplified)
+                    for _lbl, _sdf in [("inc", _inc), ("bal", _bal), ("cf", _cf)]:
+                        if _sdf.empty:
+                            continue
+                        _dcol = "filing_date" if "filing_date" in _sdf.columns else "report_date"
+                        if _dcol not in _sdf.columns:
+                            continue
+                        _sdf[_dcol] = pd.to_datetime(_sdf[_dcol])
+                        _sdf = _sdf.sort_values(_dcol)
+                        _ncols = _sdf.select_dtypes(include=["number"]).columns.tolist()
+                        _ncols = [c for c in _ncols if c != _dcol and "date" not in c.lower()]
+                        if _ncols:
+                            _si = _sdf.set_index(_dcol)[_ncols]
+                            _sa = _si.reindex(_ent_cache.index, method="ffill")
+                            _new = [c for c in _sa.columns if c not in _ent_cache.columns]
+                            if _new:
+                                _ent_cache = _ent_cache.join(_sa[_new], how="left")
+
+                    # Compute derived variables
+                    if "close" in _ent_cache.columns and _ent_cache["close"].notna().sum() > 5:
+                        from operator1.features.derived_variables import compute_derived_variables
+                        _ent_cache = compute_derived_variables(_ent_cache)
+
+                    return ent_id, _ent_cache
+                except Exception as _exc:
+                    logger.debug("Linked entity %s fetch failed: %s", ent_id, _exc)
+                    return ent_id, pd.DataFrame()
+
+            # Fetch linked entities in parallel
+            if _all_linked:
+                with ThreadPoolExecutor(max_workers=4) as executor:
+                    _futures = {
+                        executor.submit(_fetch_linked_entity, ent): ent
+                        for ent in _all_linked
+                    }
+                    for future in as_completed(_futures):
+                        ent_info = _futures[future]
+                        try:
+                            ent_id, ent_cache = future.result()
+                            if not ent_cache.empty:
+                                linked_caches[ent_id] = ent_cache
+                                logger.info(
+                                    "  Linked %s: %d rows x %d cols",
+                                    ent_info.get("name", ent_id)[:30],
+                                    len(ent_cache), len(ent_cache.columns),
+                                )
+                        except Exception as _exc:
+                            logger.debug("Linked entity future failed: %s", _exc)
+
+                logger.info(
+                    "Linked entity data: %d/%d entities fetched",
+                    len(linked_caches), len(_all_linked),
+                )
+
+            # Step 5g: Compute linked aggregates
+            if linked_caches:
+                try:
+                    from operator1.features.linked_aggregates import compute_linked_aggregates
+                    linked_agg_df = compute_linked_aggregates(
+                        target_daily=cache,
+                        linked_daily=linked_caches,
+                        entity_groups=_entity_groups,
+                    )
+                    # Merge aggregate columns into the target cache
+                    if linked_agg_df is not None and not linked_agg_df.empty:
+                        _new_agg_cols = [
+                            c for c in linked_agg_df.columns if c not in cache.columns
+                        ]
+                        if _new_agg_cols:
+                            cache = cache.join(linked_agg_df[_new_agg_cols], how="left")
+                        logger.info(
+                            "Linked aggregates computed: %d columns merged into cache",
+                            len(_new_agg_cols),
+                        )
+                except Exception as exc:
+                    logger.warning("Linked aggregates computation failed: %s", exc)
     else:
         if llm_client is None:
             logger.info("Step 5e: Skipped (no LLM API key for entity discovery)")
         else:
             logger.info("Step 5e: Skipped (--skip-linked)")
+
+    # Step 5h: Peer percentile ranking (requires linked caches)
+    peer_ranking_result = None
+    if linked_caches:
+        try:
+            from operator1.features.peer_ranking import compute_peer_ranking
+            cache, _pr_result = compute_peer_ranking(
+                cache, linked_caches=linked_caches,
+            )
+            peer_ranking_result = {
+                "n_peers": _pr_result.n_peers,
+                "n_variables_ranked": _pr_result.n_variables_ranked,
+                "latest_composite_rank": _pr_result.latest_composite_rank,
+                "latest_label": _pr_result.latest_label,
+                "variable_ranks": _pr_result.variable_ranks,
+            }
+            logger.info(
+                "Peer ranking: rank=%.1f (%s), %d peers, %d variables",
+                _pr_result.latest_composite_rank
+                if not pd.isna(_pr_result.latest_composite_rank) else 0.0,
+                _pr_result.latest_label,
+                _pr_result.n_peers,
+                _pr_result.n_variables_ranked,
+            )
+        except Exception as exc:
+            logger.warning("Peer ranking failed: %s", exc)
+
+    # Step 5i: News sentiment scoring (uses LLM for AI scoring, keyword fallback)
+    sentiment_result = None
+    try:
+        from operator1.features.news_sentiment import compute_news_sentiment
+        cache, _sent_result = compute_news_sentiment(
+            cache,
+            gemini_client=llm_client,
+            symbol=ticker,
+        )
+        if _sent_result.n_articles_scored > 0:
+            sentiment_result = {
+                "n_articles_fetched": _sent_result.n_articles_fetched,
+                "n_articles_scored": _sent_result.n_articles_scored,
+                "scoring_method": _sent_result.scoring_method,
+                "mean_sentiment": _sent_result.mean_sentiment,
+                "latest_sentiment": _sent_result.latest_sentiment,
+                "latest_label": _sent_result.latest_label,
+            }
+            logger.info(
+                "Sentiment: %s (%.3f), %d articles scored via %s",
+                _sent_result.latest_label,
+                _sent_result.latest_sentiment
+                if not pd.isna(_sent_result.latest_sentiment) else 0.0,
+                _sent_result.n_articles_scored,
+                _sent_result.scoring_method,
+            )
+        else:
+            logger.info("Sentiment: no articles available for scoring")
+    except Exception as exc:
+        logger.warning("News sentiment scoring failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Step 6: Temporal modeling (optional)
@@ -1092,12 +1281,20 @@ Non-interactive examples:
         from operator1.models.monte_carlo import run_monte_carlo
         from operator1.models.prediction_aggregator import run_prediction_aggregation
 
-        # Collect injected feature columns for temporal model learning
+        # Collect injected feature columns for temporal model learning.
+        # Include linked aggregate columns (competitors_avg_*, suppliers_median_*,
+        # etc.) so that temporal models can learn from cross-entity signals.
+        _linked_prefixes = (
+            "competitors_", "suppliers_", "customers_",
+            "financial_institutions_", "sector_peers_", "industry_peers_",
+        )
         _extra_vars = [
             c for c in cache.columns
             if (c.startswith("fh_") or c.startswith("sentiment_")
-                or c.startswith("peer_") or c.startswith("macro_"))
+                or c.startswith("peer_") or c.startswith("macro_")
+                or any(c.startswith(p) for p in _linked_prefixes))
             and cache[c].dtype in ("float64", "float32", "int64")
+            and not c.startswith("is_missing_")
         ]
         if _extra_vars:
             logger.info("Extra variables for temporal models (%d): %s", len(_extra_vars), _extra_vars[:10])
@@ -1194,7 +1391,7 @@ Non-interactive examples:
                 granger_result=granger_result,
                 transfer_entropy_result=transfer_entropy_result,
                 peer_result=None,
-                linked_caches=None,
+                linked_caches=linked_caches or None,
                 extra_variables=_extra_vars,
                 economic_plane=_economic_plane,
             )
@@ -1476,7 +1673,7 @@ Non-interactive examples:
         profile = build_company_profile(
             verified_target=target_profile,
             cache=cache,
-            linked_aggregates=None,
+            linked_aggregates=linked_agg_df,
             regime_result=regime_result_dict,
             forecast_result=forecast_result,
             mc_result=mc_result,
@@ -1491,8 +1688,8 @@ Non-interactive examples:
                 else None
             ),
             financial_health_result=fh_dict,
-            sentiment_result=None,
-            peer_ranking_result=None,
+            sentiment_result=sentiment_result,
+            peer_ranking_result=peer_ranking_result,
             macro_quadrant_result=_to_dict(macro_quadrant_result),
         )
 
