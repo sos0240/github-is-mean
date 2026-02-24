@@ -2408,6 +2408,64 @@ def _build_fallback_report(profile: dict[str, Any], tier: ReportTier = ReportTie
             lines.append("---")
             lines.append("")
 
+    # Premium teaser for Basic and Pro tiers
+    if tier != ReportTier.PREMIUM:
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+        lines.append("## Unlock the Full Picture")
+        lines.append("")
+
+        if tier == ReportTier.BASIC:
+            lines.append(
+                "This Basic report covers the essential screening metrics. "
+                "Upgrade to **Premium** for the complete institutional-grade analysis "
+                "including:"
+            )
+        else:
+            lines.append(
+                "This Pro report provides a strong foundation for investment "
+                "analysis. Upgrade to **Premium** for the full institutional-grade "
+                "deep dive including:"
+            )
+
+        lines.append("")
+        # Teaser items -- hint at value without exposing data
+        _premium_teasers_basic = [
+            "Historical performance analysis with trend decomposition",
+            "Financial health scoring across five survival tiers",
+            "Capital allocation and management discipline assessment",
+            "Peer comparison with relative valuation positioning",
+            "Macroeconomic environment classification and impact analysis",
+            "Temporal regime analysis and predictive model insights",
+            "Prediction forecasts with confidence intervals",
+            "Supply chain and contagion risk mapping",
+            "Competitive landscape game-theoretic modelling",
+            "Advanced quantitative insights (copula tail risk, causal networks, "
+            "cycle decomposition, non-linear state estimation)",
+            "AI-generated narrative powered by institutional-grade LLM analysis",
+        ]
+        _premium_teasers_pro = [
+            "Capital allocation deep dive with five-dimension management "
+            "discipline scoring",
+            "Temporal regime detection and predictive model ensemble",
+            "Prediction forecasts with Monte Carlo simulation confidence bands",
+            "Technical pattern recognition and chart-based signals",
+            "Supply chain contagion risk modelling and domino-effect estimation",
+            "Advanced quantitative insights (copula tail risk, transfer entropy, "
+            "Sobol sensitivity, particle filter state estimation)",
+            "Genetic algorithm-optimised model ensemble weights",
+            "Full investment recommendation with risk-adjusted positioning",
+            "AI-generated narrative powered by institutional-grade LLM analysis",
+        ]
+
+        teasers = _premium_teasers_basic if tier == ReportTier.BASIC else _premium_teasers_pro
+        for teaser in teasers:
+            lines.append(f"- {teaser}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
     return "\n".join(lines)
 
 
