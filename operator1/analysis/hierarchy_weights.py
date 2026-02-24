@@ -237,6 +237,7 @@ def compute_hierarchy_weights(
 
     regimes_cfg = config.get("regimes", {})
     vanity_cfg = config.get("vanity_adjustment", {})
+    vanity_v2_cfg = config.get("vanity_v2", {})
 
     result = df.copy()
 
@@ -244,9 +245,25 @@ def compute_hierarchy_weights(
     result["survival_regime"] = select_regime_series(result)
 
     # 2. Assign weights per day
-    vanity_pct = result.get(
-        "vanity_percentage", pd.Series(np.nan, index=result.index),
-    )
+    # Prefer vanity_score (v2) if available, fall back to vanity_percentage
+    if "vanity_score" in result.columns and result["vanity_score"].notna().any():
+        vanity_pct = result["vanity_score"]
+        vanity_trend = result.get("vanity_trend", pd.Series(np.nan, index=result.index))
+        # Use v2 threshold if available
+        v2_adj = vanity_v2_cfg.get("hierarchy_adjustment", {})
+        if v2_adj:
+            vanity_cfg = {
+                "threshold": v2_adj.get("threshold", vanity_cfg.get("threshold", 10.0)),
+                "tier1_delta": vanity_cfg.get("tier1_delta", 0.05),
+                "tier4_delta": vanity_cfg.get("tier4_delta", -0.02),
+                "tier5_delta": vanity_cfg.get("tier5_delta", -0.03),
+                "rising_trend_multiplier": v2_adj.get("rising_trend_multiplier", 1.0),
+            }
+    else:
+        vanity_pct = result.get(
+            "vanity_percentage", pd.Series(np.nan, index=result.index),
+        )
+        vanity_trend = pd.Series(np.nan, index=result.index)
 
     # Pre-compute weight vectors for each regime
     regime_weights_cache: dict[str, list[float]] = {}
@@ -266,7 +283,15 @@ def compute_hierarchy_weights(
 
         # Apply vanity adjustment (only active in survival regimes)
         vp = vanity_pct.iloc[idx]
-        adjusted = _apply_vanity_adjustment(base_weights, vp, regime, vanity_cfg)
+        # Amplify adjustment when vanity trend is rising
+        effective_cfg = dict(vanity_cfg)
+        trend_val = vanity_trend.iloc[idx]
+        if trend_val == "rising":
+            multiplier = vanity_cfg.get("rising_trend_multiplier", 1.0)
+            effective_cfg["tier1_delta"] = vanity_cfg.get("tier1_delta", 0.05) * multiplier
+            effective_cfg["tier4_delta"] = vanity_cfg.get("tier4_delta", -0.02) * multiplier
+            effective_cfg["tier5_delta"] = vanity_cfg.get("tier5_delta", -0.03) * multiplier
+        adjusted = _apply_vanity_adjustment(base_weights, vp, regime, effective_cfg)
 
         for tier_idx in range(_NUM_TIERS):
             col = f"hierarchy_tier{tier_idx+1}_weight"

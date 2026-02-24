@@ -331,14 +331,60 @@ def _build_survival_section(cache: pd.DataFrame | None) -> dict[str, Any]:
 
 
 def _build_vanity_section(cache: pd.DataFrame | None) -> dict[str, Any]:
-    """Summarise vanity percentage from the cache."""
-    if cache is None or cache.empty or "vanity_percentage" not in cache.columns:
+    """Summarise vanity percentage and v2 score from the cache."""
+    if cache is None or cache.empty:
         return {"available": False}
 
-    return {
-        "available": True,
-        **_series_summary(cache["vanity_percentage"]),
-    }
+    section: dict[str, Any] = {"available": False}
+
+    # Legacy vanity_percentage
+    if "vanity_percentage" in cache.columns:
+        section.update({
+            "available": True,
+            **_series_summary(cache["vanity_percentage"]),
+        })
+
+    # V2 vanity score
+    if "vanity_score" in cache.columns and cache["vanity_score"].notna().any():
+        section["v2_available"] = True
+        section["v2_score"] = _series_summary(cache["vanity_score"])
+        section["v2_score_21d"] = _series_summary(
+            cache["vanity_score_21d"],
+        ) if "vanity_score_21d" in cache.columns else {}
+
+        # Latest label and trend
+        last_valid = cache["vanity_score"].last_valid_index()
+        if last_valid is not None:
+            section["v2_label"] = _safe_str(
+                cache.at[last_valid, "vanity_label"]
+                if "vanity_label" in cache.columns else None,
+            )
+            section["v2_trend"] = _safe_str(
+                cache.at[last_valid, "vanity_trend"]
+                if "vanity_trend" in cache.columns else None,
+            )
+
+        # Component breakdown (latest values)
+        v2_components = [
+            "vanity_rnd_mismatch",
+            "vanity_sga_bloat_v2",
+            "vanity_capital_misallocation",
+            "vanity_competitive_decay",
+            "vanity_sentiment_gap",
+        ]
+        breakdown = {}
+        for comp in v2_components:
+            if comp in cache.columns:
+                s = cache[comp]
+                last_idx = s.last_valid_index()
+                breakdown[comp] = _safe_float(
+                    s.at[last_idx] if last_idx is not None else None,
+                )
+        section["v2_breakdown"] = breakdown
+    else:
+        section["v2_available"] = False
+
+    return section
 
 
 def _build_linked_section(

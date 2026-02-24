@@ -82,3 +82,23 @@ vanity_adjustment:
   tier1_delta: 0.05            # add to tier1 (liquidity)
   tier4_delta: -0.02           # subtract from tier4 (profitability)
   tier5_delta: -0.03           # subtract from tier5 (growth/valuation)
+
+# Vanity v2 configuration.
+# Proxy-based scoring that works with reliably available data.
+vanity_v2:
+  weights:
+    rnd_mismatch: 0.15         # R&D spend vs revenue growth mismatch
+    sga_bloat: 0.25            # SGA bloat relative to peers/thresholds
+    capital_misallocation: 0.30  # debt/dividend misallocation signals
+    competitive_decay: 0.15    # losing competitive ground
+    sentiment_gap: 0.15        # sentiment vs reality disconnect
+  labels:
+    - [20, "Disciplined"]
+    - [40, "Moderate"]
+    - [70, "Wasteful"]
+    - [100, "Reckless"]
+  trend_window_short: 21       # days for short-term trend MA
+  trend_window_long: 63        # days for long-term trend MA
+  hierarchy_adjustment:
+    rising_trend_multiplier: 1.5  # amplify weight shift when trend rising
+    threshold: 40              # vanity_score above which adjustment applies

@@ -26,7 +26,6 @@ import os
 import sys
 import time
 import socket
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -462,11 +461,11 @@ def choose_data_source_mode() -> str:
     print(_bold("  Choose data source mode:"))
     print("")
     print(f"    {_bold('1')}. {_green('Wrappers only')} (recommended)")
-    print(f"       Uses unofficial wrapper libraries (edgartools, dart-fss, etc.)")
+    print("       Uses unofficial wrapper libraries (edgartools, dart-fss, etc.)")
     print(f"       {_dim('No extra API keys needed. Simplest setup.')}")
     print("")
     print(f"    {_bold('2')}. {_yellow('API + Wrappers together')}")
-    print(f"       Uses raw API endpoints alongside wrappers for richer data")
+    print("       Uses raw API endpoints alongside wrappers for richer data")
     print(f"       {_dim('May require market-specific API keys (all free).')}")
     print("")
 

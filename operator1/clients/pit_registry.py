@@ -25,8 +25,7 @@ Total Tier 1 coverage: $91+ trillion in market cap.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -734,7 +733,7 @@ def format_market_menu(region: str) -> str:
     if not markets:
         return f"\nNo markets available for region: {region}\n"
 
-    lines = [f"", f"Markets in {region}:", ""]
+    lines = ["", f"Markets in {region}:", ""]
     for idx, m in enumerate(markets, 1):
         key_note = " (API key required)" if m.requires_api_key else " (no key needed)"
         lines.append(

@@ -298,8 +298,8 @@ def _build_company_overview(profile: dict[str, Any]) -> str:
         return "Company identity data unavailable."
 
     lines = [
-        f"| Field | Value |",
-        f"|-------|-------|",
+        "| Field | Value |",
+        "|-------|-------|",
         f"| **Name** | {identity.get('name', 'N/A')} |",
         f"| **ISIN** | {identity.get('isin', 'N/A')} |",
         f"| **Ticker** | {identity.get('ticker', 'N/A')} |",
@@ -423,18 +423,20 @@ def _build_financial_health(profile: dict[str, Any]) -> str:
     else:
         lines.append("Risk tier allocation data unavailable.")
 
-    # Vanity Assessment
-    lines.extend(["", "### Capital Allocation Efficiency (Vanity Assessment)", ""])
-    if vanity.get("available"):
-        lines.append(f"- **Current period vanity expenditure**: {_fmt(vanity.get('latest'), '.1f')}% of revenue")
-        lines.append(f"- **Historical average**: {_fmt(vanity.get('mean'), '.1f')}%")
-        lines.append(f"- **Peak**: {_fmt(vanity.get('max'), '.1f')}%")
-        lines.append("")
-        lines.append("Vanity expenditure includes executive compensation excess, "
-                     "SG&A bloat vs industry median, share buybacks during negative free cash flow, "
-                     "and marketing spend during survival mode.")
+    # Capital Allocation Quality (brief summary -- detail in premium section 19)
+    lines.extend(["", "### Capital Allocation Quality", ""])
+
+    if vanity.get("v2_available"):
+        v2_score = vanity.get("v2_score", {})
+        lines.append(
+            f"- **Management discipline rating**: {vanity.get('v2_label', 'N/A')} "
+            f"({_fmt(v2_score.get('latest'), '.1f')} / 100)"
+        )
+        lines.append(f"- **Direction**: {vanity.get('v2_trend', 'N/A')}")
+    elif vanity.get("available"):
+        lines.append(f"- **Non-productive expenditure ratio**: {_fmt(vanity.get('latest'), '.1f')}% of revenue")
     else:
-        lines.append("Vanity percentage data unavailable.")
+        lines.append("Capital allocation quality data unavailable.")
 
     if not lines:
         return "Financial health data unavailable."
@@ -1469,8 +1471,8 @@ def _build_graph_risk_section(profile: dict[str, Any]) -> str:
         "### Contagion Risk (Domino Effect)",
         "",
         f"- **Spillover probability**: {_pct(gr.get('contagion_target_infection_prob'))}",
-        f"  *(If any linked company enters financial distress, this is the estimated "
-        f"probability that the trouble spreads to affect this company.)*",
+        "  *(If any linked company enters financial distress, this is the estimated "
+        "probability that the trouble spreads to affect this company.)*",
         f"- **Expected companies affected in a crisis**: {_fmt(gr.get('contagion_expected_infected'), '.1f')}",
         "",
         "### Supply Chain Concentration Risk",
@@ -1988,6 +1990,105 @@ def _build_advanced_insights(profile: dict[str, Any]) -> str:
                         "deep learning for growth forecasting).*")
             lines.append("")
 
+    # Capital Allocation Deep Dive (premium-only detailed breakdown)
+    vanity = profile.get("vanity", {})
+    if vanity.get("v2_available"):
+        v2_score = vanity.get("v2_score", {})
+        lines.append("### Capital Allocation & Management Discipline Assessment")
+        lines.append("")
+        lines.append(
+            "This proprietary scoring framework evaluates management's capital "
+            "allocation effectiveness by examining five dimensions of corporate "
+            "financial behavior. Each dimension is scored from 0 (highly disciplined) "
+            "to 100 (significant misallocation), with the composite providing an "
+            "overall assessment of management stewardship quality."
+        )
+        lines.append("")
+        lines.append(
+            f"- **Composite discipline score**: {_fmt(v2_score.get('latest'), '.1f')} / 100 "
+            f"({vanity.get('v2_label', 'N/A')})"
+        )
+        lines.append(f"- **21-day moving average**: {_fmt(vanity.get('v2_score_21d', {}).get('mean'), '.1f')}")
+        lines.append(f"- **Historical range**: {_fmt(v2_score.get('min'), '.1f')} -- "
+                     f"{_fmt(v2_score.get('max'), '.1f')}")
+        lines.append(f"- **Trend**: {vanity.get('v2_trend', 'N/A')}")
+        lines.append("")
+
+        breakdown = vanity.get("v2_breakdown", {})
+        _dim_labels = {
+            "vanity_rnd_mismatch": (
+                "Innovation Efficiency",
+                "Evaluates whether R&D expenditure is generating returns. A high "
+                "score indicates sustained research spending without corresponding "
+                "revenue growth -- a potential signal of undisciplined innovation "
+                "investment or strategic misalignment.",
+            ),
+            "vanity_sga_bloat_v2": (
+                "Operating Cost Efficiency",
+                "Measures SG&A expense relative to sector peers, adjusted for "
+                "margin trajectory. Elevated overhead costs combined with "
+                "compressing margins may indicate managerial bloat or an "
+                "unsustainable cost structure.",
+            ),
+            "vanity_capital_misallocation": (
+                "Balance Sheet Stewardship",
+                "Assesses whether leverage decisions align with the company's "
+                "liquidity position. Flags include debt accumulation during "
+                "liquidity deterioration and shareholder distributions while "
+                "solvency metrics are under stress.",
+            ),
+            "vanity_competitive_decay": (
+                "Competitive Position Erosion",
+                "Quantifies the divergence between perceived market standing and "
+                "actual competitive performance. Rising competitive pressure "
+                "alongside declining peer rankings and margin compression may "
+                "indicate a deteriorating moat.",
+            ),
+            "vanity_sentiment_gap": (
+                "Market Narrative Divergence",
+                "Measures the gap between market sentiment (news flow, analyst "
+                "coverage) and underlying financial trajectory. A positive "
+                "narrative accompanying declining fundamental health scores "
+                "warrants additional due diligence.",
+            ),
+        }
+
+        if breakdown:
+            lines.append("| Dimension | Score | Assessment |")
+            lines.append("|-----------|-------|------------|")
+            for comp_key, (dim_name, _description) in _dim_labels.items():
+                val = breakdown.get(comp_key)
+                if val is not None and not (isinstance(val, float) and val != val):
+                    if val <= 20:
+                        assessment = "Disciplined"
+                    elif val <= 40:
+                        assessment = "Adequate"
+                    elif val <= 70:
+                        assessment = "Elevated concern"
+                    else:
+                        assessment = "Material risk"
+                    lines.append(f"| {dim_name} | {_fmt(val, '.1f')} | {assessment} |")
+                else:
+                    lines.append(f"| {dim_name} | N/A | Insufficient data |")
+            lines.append("")
+
+            # Detailed descriptions for each dimension
+            lines.append("**Dimension Definitions:**")
+            lines.append("")
+            for comp_key, (dim_name, description) in _dim_labels.items():
+                lines.append(f"- **{dim_name}**: {description}")
+            lines.append("")
+
+        lines.append(
+            "*Interpretation guide: Scores below 20 reflect strong capital "
+            "discipline characteristic of well-managed businesses. Scores between "
+            "20 and 40 are typical of companies with adequate but not exceptional "
+            "stewardship. Scores exceeding 40 warrant closer scrutiny of "
+            "management decisions, and scores above 70 represent material "
+            "capital allocation risk that may impair long-term shareholder value.*"
+        )
+        lines.append("")
+
     if not lines:
         return "*No advanced quantitative models were run for this analysis.*"
 
@@ -2306,6 +2407,64 @@ def _build_fallback_report(profile: dict[str, Any], tier: ReportTier = ReportTie
             lines.append("")
             lines.append("---")
             lines.append("")
+
+    # Premium teaser for Basic and Pro tiers
+    if tier != ReportTier.PREMIUM:
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+        lines.append("## Unlock the Full Picture")
+        lines.append("")
+
+        if tier == ReportTier.BASIC:
+            lines.append(
+                "This Basic report covers the essential screening metrics. "
+                "Upgrade to **Premium** for the complete institutional-grade analysis "
+                "including:"
+            )
+        else:
+            lines.append(
+                "This Pro report provides a strong foundation for investment "
+                "analysis. Upgrade to **Premium** for the full institutional-grade "
+                "deep dive including:"
+            )
+
+        lines.append("")
+        # Teaser items -- hint at value without exposing data
+        _premium_teasers_basic = [
+            "Historical performance analysis with trend decomposition",
+            "Financial health scoring across five survival tiers",
+            "Capital allocation and management discipline assessment",
+            "Peer comparison with relative valuation positioning",
+            "Macroeconomic environment classification and impact analysis",
+            "Temporal regime analysis and predictive model insights",
+            "Prediction forecasts with confidence intervals",
+            "Supply chain and contagion risk mapping",
+            "Competitive landscape game-theoretic modelling",
+            "Advanced quantitative insights (copula tail risk, causal networks, "
+            "cycle decomposition, non-linear state estimation)",
+            "AI-generated narrative powered by institutional-grade LLM analysis",
+        ]
+        _premium_teasers_pro = [
+            "Capital allocation deep dive with five-dimension management "
+            "discipline scoring",
+            "Temporal regime detection and predictive model ensemble",
+            "Prediction forecasts with Monte Carlo simulation confidence bands",
+            "Technical pattern recognition and chart-based signals",
+            "Supply chain contagion risk modelling and domino-effect estimation",
+            "Advanced quantitative insights (copula tail risk, transfer entropy, "
+            "Sobol sensitivity, particle filter state estimation)",
+            "Genetic algorithm-optimised model ensemble weights",
+            "Full investment recommendation with risk-adjusted positioning",
+            "AI-generated narrative powered by institutional-grade LLM analysis",
+        ]
+
+        teasers = _premium_teasers_basic if tier == ReportTier.BASIC else _premium_teasers_pro
+        for teaser in teasers:
+            lines.append(f"- {teaser}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
 
     return "\n".join(lines)
 
@@ -2864,9 +3023,9 @@ def generate_report(
     output_dir:
         Directory for all report outputs.  Defaults to ``cache/report/``.
     generate_pdf:
-        If True, attempt to create a PDF via pandoc.
+        If True, create a PDF via pandoc for this tier.
     generate_chart_images:
-        If True, generate chart PNGs.
+        If True, generate chart PNGs (premium only).
     tier:
         Report tier controlling how many sections are included.
         Defaults to PREMIUM (all 22 sections).
@@ -2939,9 +3098,9 @@ def generate_report(
         chart_dir = out / "charts"
         chart_paths = generate_charts(cache, profile, chart_dir)
 
-    # Step 4: Optional PDF (only for premium)
+    # Step 4: Optional PDF (all tiers)
     pdf_path: str | None = None
-    if generate_pdf and tier == ReportTier.PREMIUM:
+    if generate_pdf:
         pdf_path = _generate_pdf(md_path, out / f"{tier.value}_report.pdf")
 
     return {
@@ -2975,9 +3134,9 @@ def generate_all_reports(
     output_dir:
         Directory for all report outputs.
     generate_pdf:
-        If True, generate PDF for premium report.
+        If True, generate PDF for all three report tiers.
     generate_chart_images:
-        If True, generate chart PNGs for premium report.
+        If True, generate chart PNGs (premium report only).
 
     Returns
     -------

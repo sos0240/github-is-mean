@@ -36,13 +36,11 @@ Top-level entry points:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 import pandas as pd
-
-from operator1.config_loader import load_config
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +245,6 @@ def compute_fuzzy_protection(
         - ``fuzzy_protection_label``
     """
     result = cache.copy()
-    n = len(result)
 
     # Sector strategicness (constant for all days)
     sector_score = _sector_membership(sector)
