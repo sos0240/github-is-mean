@@ -1,19 +1,19 @@
 """API client modules for external data sources.
 
-Point-in-Time (PIT) data providers -- region-based selection:
+Point-in-Time (PIT) data providers -- region-based selection
+(all use free community unofficial wrapper libraries):
 
-  - ``us_edgar``         -- US (SEC EDGAR, NYSE/NASDAQ)
-  - ``eu_esef_wrapper``  -- EU (ESEF/XBRL, pan-European)
-  - ``uk_ch_wrapper``    -- UK (Companies House, LSE)
-  - ``jp_edinet_wrapper``-- Japan (EDINET, TSE)
-  - ``kr_dart_wrapper``  -- South Korea (DART, KOSPI/KOSDAQ)
-  - ``tw_mops_wrapper``  -- Taiwan (MOPS, TWSE/TPEX)
-  - ``br_cvm_wrapper``   -- Brazil (CVM, B3)
-  - ``cl_cmf_wrapper``   -- Chile (CMF, Santiago)
+  - ``us_edgar``         -- US (SEC EDGAR via edgartools + sec-edgar-api)
+  - ``eu_esef_wrapper``  -- EU (ESEF/XBRL via pyesef)
+  - ``uk_ch_wrapper``    -- UK (Companies House wrapper with caching)
+  - ``jp_edinet_wrapper``-- Japan (EDINET via edinet-tools)
+  - ``kr_dart_wrapper``  -- South Korea (DART via dart-fss)
+  - ``tw_mops_wrapper``  -- Taiwan (MOPS scraper wrapper)
+  - ``br_cvm_wrapper``   -- Brazil (CVM via pycvm)
+  - ``cl_cmf_wrapper``   -- Chile (CMF wrapper with caching)
 
 Supplementary data providers (for partial-coverage regions):
   - ``supplement``       -- OpenFIGI, Euronext, JPX, TWSE, B3, Santiago
-  - ``ohlcv_provider``   -- Alpha Vantage (global), TWSE (Taiwan)
 
 Data normalization:
   - ``canonical_translator`` -- Maps all API data to canonical field format

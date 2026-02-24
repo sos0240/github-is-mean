@@ -485,12 +485,6 @@ def setup_market_api_keys(keys: dict[str, str]) -> dict[str, str]:
     market_keys = [
         ("COMPANIES_HOUSE_API_KEY", "UK Companies House", "https://developer.company-information.service.gov.uk/"),
         ("DART_API_KEY", "South Korea DART", "https://opendart.fss.or.kr/"),
-        ("FRED_API_KEY", "US FRED (macro data)", "https://fred.stlouisfed.org/docs/api/api_key.html"),
-        ("ESTAT_API_KEY", "Japan e-Stat", "https://www.e-stat.go.jp/en"),
-        ("KOSIS_API_KEY", "South Korea KOSIS", "https://kosis.kr/openapi/"),
-        ("INSEE_API_KEY", "France INSEE", "https://api.insee.fr/"),
-        ("BCCH_API_KEY", "Chile BCCh", "https://si3.bcentral.cl/"),
-        ("ALPHA_VANTAGE_API_KEY", "Alpha Vantage (OHLCV)", "https://www.alphavantage.co/support/#api-key"),
     ]
 
     print(_dim("  Market-specific API keys (all free registration):"))
@@ -818,32 +812,8 @@ def main() -> int:
         _step(5, "Market API Keys")
         keys = setup_market_api_keys(keys)
     else:
-        # Even in wrappers-only mode, OHLCV price data is needed since
-        # most PIT sources (SEC EDGAR, ESEF, EDINET, etc.) do not provide
-        # price data.  Without OHLCV, the pipeline loses all price-derived
-        # features (returns, volatility, drawdown).
-        _step(5, "OHLCV Price Data Key")
-        env_path = Path(__file__).resolve().parent / ".env"
-        if "ALPHA_VANTAGE_API_KEY" not in keys:
-            av_env = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
-            if av_env:
-                keys["ALPHA_VANTAGE_API_KEY"] = av_env.strip()
-
-        if "ALPHA_VANTAGE_API_KEY" in keys:
-            _ok(f"ALPHA_VANTAGE_API_KEY: {_mask_key(keys['ALPHA_VANTAGE_API_KEY'])}")
-        else:
-            _warn(
-                "ALPHA_VANTAGE_API_KEY not set. Most PIT sources don't provide "
-                "price data, so OHLCV features (returns, volatility, drawdown) "
-                "will be unavailable."
-            )
-            _info("Register for free: https://www.alphavantage.co/support/#api-key")
-            value = _prompt("Enter ALPHA_VANTAGE_API_KEY (or press Enter to skip)")
-            if value:
-                keys["ALPHA_VANTAGE_API_KEY"] = value.strip()
-                os.environ["ALPHA_VANTAGE_API_KEY"] = value.strip()
-                _save_key_to_env(env_path, "ALPHA_VANTAGE_API_KEY", value.strip())
-                _ok("ALPHA_VANTAGE_API_KEY saved")
+        _step(5, "Data Source Check")
+        _ok("Using community wrapper libraries only (no extra API keys needed).")
 
     # ------------------------------------------------------------------
     # Step 6: Company + Country Input

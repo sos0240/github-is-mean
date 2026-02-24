@@ -151,32 +151,13 @@ def fetch_macro_data(
     # Fetch indicators if not pre-fetched
     # ------------------------------------------------------------------
     if macro_raw is None:
-        try:
-            from operator1.clients.macro_client import fetch_macro_indicators
-
-            _macro_key_map = {
-                "us_fred": "FRED_API_KEY",
-                "jp_estat": "ESTAT_API_KEY",
-                "kr_kosis": "KOSIS_API_KEY",
-                "fr_insee": "INSEE_API_KEY",
-                "cl_bcch": "BCCH_API_KEY",
-            }
-            api_key = secrets.get(
-                _macro_key_map.get(macro_api_info.macro_id, ""), ""
-            )
-
-            logger.info(
-                "Fetching macro data from %s (%s)...",
-                macro_api_info.api_name,
-                macro_api_info.country,
-            )
-            macro_raw = fetch_macro_indicators(macro_api_info, api_key=api_key)
-        except Exception as exc:
-            logger.warning("Macro data fetch failed: %s", exc)
-            return MacroDataset(
-                country_iso3=country_iso2,
-                missing=list(_MACRO_TO_CANONICAL.values()),
-            )
+        logger.info(
+            "Macro data fetching skipped (government macro APIs removed)."
+        )
+        return MacroDataset(
+            country_iso3=country_iso2,
+            missing=list(_MACRO_TO_CANONICAL.values()),
+        )
 
     # ------------------------------------------------------------------
     # Convert raw series -> yearly DataFrames for downstream consumers

@@ -42,13 +42,13 @@ class TestImports(unittest.TestCase):
         from operator1.clients.pit_base import PITClient, PITClientError
         self.assertTrue(callable(PITClientError))
 
-    def test_sec_edgar_client_import(self):
-        from operator1.clients.sec_edgar import SECEdgarClient, SECEdgarError
-        self.assertTrue(callable(SECEdgarClient))
+    def test_us_edgar_wrapper_import(self):
+        from operator1.clients.us_edgar import USEdgarClient
+        self.assertTrue(callable(USEdgarClient))
 
-    def test_esef_client_import(self):
-        from operator1.clients.esef import ESEFClient, ESEFError
-        self.assertTrue(callable(ESEFClient))
+    def test_eu_esef_wrapper_import(self):
+        from operator1.clients.eu_esef_wrapper import EUEsefClient
+        self.assertTrue(callable(EUEsefClient))
 
     def test_equity_provider_import(self):
         from operator1.clients.equity_provider import EquityProvider, create_pit_client
@@ -137,14 +137,14 @@ class TestSecretsLoader(unittest.TestCase):
 
     @patch.dict("os.environ", {
         "GEMINI_API_KEY": "test_gemini",
-        "FRED_API_KEY": "test_fred",
+        "DART_API_KEY": "test_dart",
     })
-    def test_load_macro_keys_from_env(self):
-        """Macro API keys should be loaded when present."""
+    def test_load_market_keys_from_env(self):
+        """Market API keys should be loaded when present."""
         from operator1.secrets_loader import load_secrets
         secrets = load_secrets()
         self.assertEqual(secrets["GEMINI_API_KEY"], "test_gemini")
-        self.assertEqual(secrets["FRED_API_KEY"], "test_fred")
+        self.assertEqual(secrets["DART_API_KEY"], "test_dart")
 
     @patch.dict("os.environ", {
         "GEMINI_API_KEY": "test_gemini",
