@@ -402,10 +402,10 @@ _COUNTRY_TO_MARKET: dict[str, str] = {
     "br": "br_cvm",
     "chile": "cl_cmf",
     "cl": "cl_cmf",
-    "germany": "eu_esef_de",
-    "de": "eu_esef_de",
-    "france": "eu_esef_fr",
-    "fr": "eu_esef_fr",
+    "germany": "de_esef",
+    "de": "de_esef",
+    "france": "fr_esef",
+    "fr": "fr_esef",
     "eu": "eu_esef",
     "europe": "eu_esef",
     "australia": "au_asx",
@@ -449,8 +449,8 @@ _KNOWN_COMPANIES: dict[str, str] = {
     "petrobras": "br_cvm", "petr4": "br_cvm",
     "bp": "uk_companies_house", "hsbc": "uk_companies_house",
     "shell": "uk_companies_house", "shel": "uk_companies_house",
-    "sap": "eu_esef_de", "siemens": "eu_esef_de",
-    "lvmh": "eu_esef_fr", "totalenergies": "eu_esef_fr",
+    "sap": "de_esef", "siemens": "de_esef",
+    "lvmh": "fr_esef", "totalenergies": "fr_esef",
 }
 
 
@@ -754,7 +754,32 @@ def main() -> int:
         _step(5, "Market API Keys")
         keys = setup_market_api_keys(keys)
     else:
-        _info("Wrappers-only mode -- no extra API keys needed.")
+        # Even in wrappers-only mode, OHLCV price data is needed since
+        # most PIT sources (SEC EDGAR, ESEF, EDINET, etc.) do not provide
+        # price data.  Without OHLCV, the pipeline loses all price-derived
+        # features (returns, volatility, drawdown).
+        _step(5, "OHLCV Price Data Key")
+        env_path = Path(__file__).resolve().parent / ".env"
+        if "ALPHA_VANTAGE_API_KEY" not in keys:
+            av_env = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
+            if av_env:
+                keys["ALPHA_VANTAGE_API_KEY"] = av_env.strip()
+
+        if "ALPHA_VANTAGE_API_KEY" in keys:
+            _ok(f"ALPHA_VANTAGE_API_KEY: {_mask_key(keys['ALPHA_VANTAGE_API_KEY'])}")
+        else:
+            _warn(
+                "ALPHA_VANTAGE_API_KEY not set. Most PIT sources don't provide "
+                "price data, so OHLCV features (returns, volatility, drawdown) "
+                "will be unavailable."
+            )
+            _info("Register for free: https://www.alphavantage.co/support/#api-key")
+            value = _prompt("Enter ALPHA_VANTAGE_API_KEY (or press Enter to skip)")
+            if value:
+                keys["ALPHA_VANTAGE_API_KEY"] = value.strip()
+                os.environ["ALPHA_VANTAGE_API_KEY"] = value.strip()
+                _save_key_to_env(env_path, "ALPHA_VANTAGE_API_KEY", value.strip())
+                _ok("ALPHA_VANTAGE_API_KEY saved")
 
     # ------------------------------------------------------------------
     # Step 6: Company + Country Input
