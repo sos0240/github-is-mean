@@ -342,6 +342,80 @@ _WB_INDICATOR_MAP = {
 }
 
 
+# ---------------------------------------------------------------------------
+# IMF (International Monetary Fund) -- global fallback via imf-reader
+# Research: .roo/research/macro-imf-reader-2026-02-24.md
+# ---------------------------------------------------------------------------
+
+# IMF indicator codes for the World Economic Outlook (WEO) dataset
+_IMF_INDICATOR_MAP: dict[str, str] = {
+    "gdp": "NGDP_RPCH",          # Real GDP growth (annual percent change)
+    "inflation": "PCPIPCH",        # Inflation, average consumer prices (percent change)
+    "interest_rate": "NGDP_RPCH",  # No direct rate; GDP growth as proxy
+    "unemployment": "LUR",         # Unemployment rate
+    "currency": "NGDP_RPCH",      # No direct FX; GDP growth as proxy
+}
+
+
+def _fetch_imf(country_code: str, indicator_name: str) -> pd.Series:
+    """Fetch a macro indicator from IMF using imf-reader.
+
+    imf-reader: https://pypi.org/project/imf-reader/
+    No API key required. Covers 190+ countries.
+    Research: .roo/research/macro-imf-reader-2026-02-24.md
+    """
+    imf_code = _IMF_INDICATOR_MAP.get(indicator_name)
+    if not imf_code:
+        return pd.Series(dtype=float)
+
+    # Only fetch meaningful indicators (skip proxies)
+    if indicator_name in ("interest_rate", "currency") and imf_code == "NGDP_RPCH":
+        return pd.Series(dtype=float)
+
+    iso3 = _iso2_to_iso3(country_code)
+    if not iso3:
+        return pd.Series(dtype=float)
+
+    try:
+        from imf_reader import weo
+
+        # imf-reader: weo.fetch() returns WEO dataset
+        df = weo.fetch()
+        if df is not None and not df.empty:
+            # Filter for country and indicator
+            mask = (
+                (df["ISO"].str.upper() == iso3.upper())
+                & (df["WEO Subject Code"].str.upper() == imf_code.upper())
+            )
+            filtered = df[mask]
+            if filtered.empty:
+                return pd.Series(dtype=float)
+
+            # Extract year columns (numeric columns are years)
+            row = filtered.iloc[0]
+            dates = []
+            values = []
+            for col in filtered.columns:
+                try:
+                    year = int(col)
+                    val = float(row[col])
+                    dates.append(pd.Timestamp(f"{year}-12-31"))
+                    values.append(val)
+                except (ValueError, TypeError):
+                    continue
+
+            if dates:
+                series = pd.Series(values, index=dates, name=f"imf_{imf_code}")
+                return series.dropna().sort_index()
+
+    except ImportError:
+        logger.debug("imf-reader not installed; IMF fallback unavailable")
+    except Exception as exc:
+        logger.debug("IMF fetch failed for %s/%s: %s", country_code, indicator_name, exc)
+
+    return pd.Series(dtype=float)
+
+
 def _fetch_worldbank(country_code: str, indicator_name: str) -> pd.Series:
     """Fetch a macro indicator from World Bank using wbgapi.
 
@@ -501,5 +575,21 @@ def fetch_macro_indicators(
                     )
             except Exception as exc:
                 logger.debug("  %s: World Bank fallback failed: %s", name, exc)
+
+    # Second fallback: try IMF (imf-reader) for any still-missing indicators
+    # Research: .roo/research/macro-imf-reader-2026-02-24.md
+    # IMF covers 190+ countries with GDP, CPI, exchange rates, fiscal data
+    for name, series in results.items():
+        if series is None and country_code:
+            try:
+                imf_series = _fetch_imf(country_code, name)
+                if imf_series is not None and not imf_series.empty:
+                    results[name] = imf_series
+                    logger.info(
+                        "  %s: IMF fallback: %d observations",
+                        name, len(imf_series),
+                    )
+            except Exception as exc:
+                logger.debug("  %s: IMF fallback failed: %s", name, exc)
 
     return results
