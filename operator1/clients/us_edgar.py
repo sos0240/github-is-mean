@@ -153,7 +153,16 @@ class USEdgarClient:
         return self._sec_api_client
 
     def _get_edgar_company(self, identifier: str):
-        """Get an edgartools Company object, with caching."""
+        """Get an edgartools Company object, with caching.
+
+        VERIFIED AGAINST OFFICIAL DOCS:
+        - Date: 2026-02-24
+        - Version: edgartools@5.17.1
+        - Docs: https://github.com/dgunning/edgartools
+        - Research Log: .roo/research/us-sec-edgar-2026-02-24.md
+        - Breaking change: v5.16+ raises CompanyNotFoundError instead of
+          setting company.not_found (Section 4 of research log)
+        """
         if identifier in self._company_cache:
             return self._company_cache[identifier]
 
@@ -161,8 +170,13 @@ class USEdgarClient:
         if not self._edgar_initialized:
             raise USEdgarError("Company", "edgartools not available (init failed)")
         import edgar
-        company = edgar.Company(identifier)
-        if company.not_found:
+        try:
+            company = edgar.Company(identifier)
+        except Exception as exc:
+            # edgartools v5.16+ raises CompanyNotFoundError for invalid identifiers
+            raise USEdgarError("Company", f"Company not found: {identifier} ({exc})") from exc
+        # Backward compat: older edgartools versions may still use not_found attribute
+        if getattr(company, "not_found", False):
             raise USEdgarError("Company", f"Company not found: {identifier}")
         self._company_cache[identifier] = company
         return company
@@ -592,9 +606,18 @@ class USEdgarClient:
                         periods=periods, annual=annual, as_dataframe=True,
                     )
                 elif statement_type == "cashflow":
-                    result = company.cash_flow(
-                        periods=periods, annual=annual, as_dataframe=True,
-                    )
+                    # edgartools v5.15+ renamed cash_flow() to cashflow_statement()
+                    # Docs: https://github.com/dgunning/edgartools CHANGELOG v5.15.0
+                    # Research: .roo/research/us-sec-edgar-2026-02-24.md Section 4
+                    if hasattr(company, "cashflow_statement"):
+                        result = company.cashflow_statement(
+                            periods=periods, annual=annual, as_dataframe=True,
+                        )
+                    else:
+                        # Fallback for older edgartools versions (<5.15)
+                        result = company.cash_flow(
+                            periods=periods, annual=annual, as_dataframe=True,
+                        )
                 else:
                     continue
 
