@@ -672,6 +672,71 @@ def _manual_market_selection() -> str:
 # Pipeline options
 # ---------------------------------------------------------------------------
 
+def _check_user_input_pii(company: str, country: str, keys: dict[str, str]) -> None:
+    """Use LLM + regex to check if user input contains personal data."""
+    try:
+        from operator1.clients.personal_data_guard import (
+            check_user_input_for_pii,
+            format_pii_warning,
+        )
+
+        # Build a lightweight LLM client for the check
+        llm_client = None
+        llm_provider = keys.get("_llm_provider", "")
+        if llm_provider == "gemini" and keys.get("GEMINI_API_KEY"):
+            from operator1.clients.gemini import GeminiClient
+            llm_client = GeminiClient(api_key=keys["GEMINI_API_KEY"])
+        elif llm_provider == "claude" and keys.get("ANTHROPIC_API_KEY"):
+            from operator1.clients.claude import ClaudeClient
+            llm_client = ClaudeClient(api_key=keys["ANTHROPIC_API_KEY"])
+
+        result = check_user_input_for_pii(company, country, llm_client)
+        if result.has_personal_data:
+            warning_text = format_pii_warning(result)
+            print("")
+            print(_red("  " + "-" * 56))
+            for line in warning_text.splitlines():
+                print(_red(f"  {line}"))
+            print(_red("  " + "-" * 56))
+            print("")
+            if not _yes_no("Your input may contain personal data. Continue anyway?", default=False):
+                print(_dim("  Cancelled. Please re-enter with a company name or ticker."))
+                sys.exit(0)
+    except Exception:
+        pass  # Non-blocking -- never prevent the pipeline from running
+
+
+def _check_market_pii(market_id: str, market) -> None:
+    """Warn the user if the resolved market's API registration requires personal data."""
+    try:
+        from operator1.clients.personal_data_guard import (
+            check_wrapper_personal_data,
+            format_pii_warning,
+        )
+
+        result = check_wrapper_personal_data(market_id)
+        if result.has_personal_data:
+            warning_text = format_pii_warning(result)
+            print("")
+            print(_yellow("  " + "-" * 56))
+            print(_yellow("  PRIVACY NOTICE: API Registration Requirements"))
+            print(_yellow("  " + "-" * 56))
+            for line in warning_text.splitlines():
+                print(_yellow(f"  {line}"))
+            print("")
+            _info(f"Market: {market.country} ({market.pit_api_name})")
+            if hasattr(market, "input_requirements") and market.input_requirements:
+                _info(f"Registration requires: {market.input_requirements}")
+            print("")
+            if not _yes_no("This market requires personal data for API registration. Continue?", default=True):
+                _info("You can choose a different market or use wrappers-only mode.")
+                sys.exit(0)
+        elif result.market_personal_data_level == "low":
+            _info(f"Note: {market.pit_api_name} requires basic registration ({result.details})")
+    except Exception:
+        pass  # Non-blocking
+
+
 def estimate_runtime(skip_linked: bool, skip_models: bool) -> str:
     """Rough time estimate based on options."""
     if skip_models and skip_linked:
@@ -801,6 +866,9 @@ def main() -> int:
     country = _prompt("Country", "US")
     _ok(f"Country: {country}")
 
+    # --- Personal data check on user input ---
+    _check_user_input_pii(company, country, keys)
+
     # ------------------------------------------------------------------
     # Step 7: LLM resolves market/client
     # ------------------------------------------------------------------
@@ -818,6 +886,8 @@ def main() -> int:
         _ok(f"Market: {market.country} ({market.pit_api_name})")
         if macro:
             _info(f"Macro data: {macro.api_name}")
+        # --- Personal data check on wrapper requirements ---
+        _check_market_pii(market_id, market)
     else:
         _err(f"Unknown market: {market_id}")
         return 1

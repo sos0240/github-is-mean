@@ -46,8 +46,9 @@ edgartools>=5.15            # US SEC EDGAR (primary) -- v5.15+ required: cash_fl
 sec-edgar-api>=1.0         # US SEC EDGAR (fallback)
 edinet-tools>=0.3          # Japan EDINET (primary) -- v0.3+ required: API changed (entity/search/documents)
 dart-fss>=0.4              # South Korea DART (primary)
-pyesef>=1.0                # EU ESEF XBRL parsing
-pycvm>=0.4                 # Brazil CVM data
+# pyesef -- REMOVED: library archived 2026-01-03 (graceful degradation in eu_esef_wrapper.py)
+# pycvm -- optional: file-based API, br_cvm_wrapper.py uses direct HTTP as primary path
+pycvm>=0.4                 # Brazil CVM data (optional, used for local file parsing)
 
 # Phase 3: Macro data libraries
 fredapi>=0.5               # US FRED (replaces manual HTTP calls)

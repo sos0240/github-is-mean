@@ -50,6 +50,8 @@ class MarketInfo:
     tier: int = 1           # 1 = launch, 2 = stretch
     phase: int = 1          # implementation phase (1 or 2)
     client_module: str = "" # dotted path to the client class module
+    personal_data_level: str = "none"  # none | low | medium | high
+    input_requirements: str = ""       # human-readable API registration requirements
 
 
 @dataclass
@@ -86,6 +88,8 @@ MARKETS: dict[str, MarketInfo] = {
         tier=1,
         phase=1,
         client_module="operator1.clients.us_edgar",
+        personal_data_level="low",
+        input_requirements="Email address (as User-Agent header)",
     ),
 
     # --- Europe ---
@@ -102,6 +106,8 @@ MARKETS: dict[str, MarketInfo] = {
         tier=1,
         phase=1,
         client_module="operator1.clients.uk_ch_wrapper",
+        personal_data_level="low",
+        input_requirements="Email, name, application description",
     ),
     "eu_esef": MarketInfo(
         market_id="eu_esef",
@@ -160,6 +166,8 @@ MARKETS: dict[str, MarketInfo] = {
         tier=1,
         phase=1,
         client_module="operator1.clients.jp_edinet_wrapper",
+        personal_data_level="medium",
+        input_requirements="Name, affiliation, phone number (Japanese-compatible may be needed), email",
     ),
     "kr_dart": MarketInfo(
         market_id="kr_dart",
@@ -174,6 +182,8 @@ MARKETS: dict[str, MarketInfo] = {
         tier=1,
         phase=1,
         client_module="operator1.clients.kr_dart_wrapper",
+        personal_data_level="medium",
+        input_requirements="Email, name, usage purpose, IP address (if corporate)",
     ),
     "tw_mops": MarketInfo(
         market_id="tw_mops",
