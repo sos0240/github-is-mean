@@ -1,77 +1,238 @@
-"""India BSE PIT client -- uses BSE India API.
+"""India BSE/NSE PIT client -- uses jugaad-data + BSE API.
 
-Primary: BSE India API (https://api.bseindia.com/BseIndiaAPI/api)
-Coverage: ~5,500+ listed companies on BSE, ~$4T market cap.
+Primary library: jugaad-data (https://marketsetup.in/documentation/jugaad-data/)
+  - NSE stock data (historical + live), RBI rates
+  - Built-in caching to avoid getting blocked by NSE
+  - Supports new NSE website
+
+Fallback: Direct BSE India API (https://api.bseindia.com/BseIndiaAPI/api)
+
+Coverage: ~5,500+ listed companies on BSE/NSE, ~$4T market cap.
+
+Research: .roo/research/in-bse-2026-02-24.md
 """
+
 from __future__ import annotations
-import json, logging, os
-from datetime import date
+
+import json
+import logging
+import os
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
+
 import pandas as pd
+
 from operator1.http_utils import cached_get, HTTPError
 
 logger = logging.getLogger(__name__)
+
 _BSE_BASE = "https://api.bseindia.com/BseIndiaAPI/api"
 _CACHE_DIR = Path("cache/in_bse")
 
+
 class INBseClient:
-    """PIT client for Indian BSE equities."""
+    """PIT client for Indian BSE/NSE equities using jugaad-data.
+
+    Implements the ``PITClient`` protocol. Uses jugaad-data as primary
+    data source for NSE stock data, with BSE India API as fallback.
+
+    Research source: .roo/research/in-bse-2026-02-24.md
+    """
+
     def __init__(self, cache_dir: Path | str = _CACHE_DIR) -> None:
         self._cache_dir = Path(cache_dir)
-        self._headers = {"Accept": "application/json", "User-Agent": "Operator1/1.0",
-                         "Referer": "https://www.bseindia.com/"}
+        self._headers = {
+            "Accept": "application/json",
+            "User-Agent": "Operator1/1.0",
+            "Referer": "https://www.bseindia.com/",
+        }
+        self._jugaad_available = False
+
+        try:
+            from jugaad_data.nse import stock_df
+            self._jugaad_available = True
+            logger.info("jugaad-data available for Indian market data")
+        except ImportError:
+            logger.info("jugaad-data not installed; Indian market data limited to BSE API")
 
     def _cache_path(self, identifier: str, fn: str) -> Path:
         return self._cache_dir / identifier.upper() / fn
+
     def _read_cache(self, identifier: str, fn: str) -> dict | None:
         p = self._cache_path(identifier, fn)
-        if not p.exists(): return None
+        if not p.exists():
+            return None
         try:
-            if fn == "profile.json" and (date.today() - date.fromtimestamp(p.stat().st_mtime)).days > 7: return None
+            if fn == "profile.json" and (date.today() - date.fromtimestamp(p.stat().st_mtime)).days > 7:
+                return None
             return json.loads(p.read_text(encoding="utf-8"))
-        except Exception: return None
+        except Exception:
+            return None
+
     def _write_cache(self, identifier: str, fn: str, data: dict) -> None:
         p = self._cache_path(identifier, fn)
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps(data, default=str, indent=2), encoding="utf-8")
 
     @property
-    def market_id(self) -> str: return "in_bse"
+    def market_id(self) -> str:
+        return "in_bse"
+
     @property
-    def market_name(self) -> str: return "India (BSE) -- BSE India"
+    def market_name(self) -> str:
+        return "India (BSE / NSE) -- jugaad-data"
+
+    # -- Company discovery ---------------------------------------------------
 
     def list_companies(self, query: str = "") -> list[dict[str, Any]]:
-        if not query: return []
+        """List Indian companies from BSE API search."""
+        if not query:
+            return []
         try:
-            data = cached_get(f"{_BSE_BASE}/Suggest/Getstockdata/{query}", headers=self._headers)
+            data = cached_get(
+                f"{_BSE_BASE}/Suggest/Getstockdata/{query}",
+                headers=self._headers,
+            )
             items = data if isinstance(data, list) else []
-            return [{"ticker": i.get("scrip_cd", ""), "name": i.get("scripname", ""),
-                     "cik": i.get("scrip_cd", ""), "exchange": "BSE", "country": "IN",
-                     "market_id": self.market_id} for i in items]
-        except Exception: return []
+            return [
+                {
+                    "ticker": i.get("scrip_cd", ""),
+                    "name": i.get("scripname", ""),
+                    "cik": i.get("scrip_cd", ""),
+                    "exchange": "BSE",
+                    "country": "IN",
+                    "market_id": self.market_id,
+                }
+                for i in items
+            ]
+        except Exception:
+            return []
 
-    def search_company(self, name: str) -> list[dict[str, Any]]: return self.list_companies(query=name)
+    def search_company(self, name: str) -> list[dict[str, Any]]:
+        return self.list_companies(query=name)
+
+    # -- Company profile -----------------------------------------------------
 
     def get_profile(self, identifier: str) -> dict[str, Any]:
         cached = self._read_cache(identifier, "profile.json")
-        if cached: return cached
+        if cached:
+            return cached
+
+        raw: dict[str, Any] = {
+            "name": "",
+            "ticker": identifier,
+            "isin": "",
+            "country": "IN",
+            "sector": "",
+            "industry": "",
+            "exchange": "BSE",
+            "currency": "INR",
+            "cik": identifier,
+        }
+
+        # Try BSE API for profile
         try:
-            data = cached_get(f"{_BSE_BASE}/StockReachGraph/stockData/{identifier}", headers=self._headers)
-            raw = {"name": data.get("comp_name", ""), "ticker": identifier, "isin": data.get("isin_code", ""),
-                   "country": "IN", "sector": data.get("sector_name", ""), "industry": data.get("industry", ""),
-                   "exchange": "BSE", "currency": "INR", "cik": identifier}
-        except Exception:
-            raw = {"name": "", "ticker": identifier, "isin": "", "country": "IN",
-                   "sector": "", "industry": "", "exchange": "BSE", "currency": "INR", "cik": identifier}
+            data = cached_get(
+                f"{_BSE_BASE}/StockReachGraph/stockData/{identifier}",
+                headers=self._headers,
+            )
+            if isinstance(data, dict):
+                raw["name"] = data.get("comp_name", "")
+                raw["isin"] = data.get("isin_code", "")
+                raw["sector"] = data.get("sector_name", "")
+                raw["industry"] = data.get("industry", "")
+        except Exception as exc:
+            logger.debug("BSE profile failed for %s: %s", identifier, exc)
+
+        # Try jugaad-data for live quote (to get current name)
+        if not raw["name"] and self._jugaad_available:
+            try:
+                from jugaad_data.nse import NSELive
+                n = NSELive()
+                q = n.stock_quote(identifier)
+                if q and isinstance(q, dict):
+                    info = q.get("info", {})
+                    raw["name"] = info.get("companyName", "")
+                    raw["industry"] = info.get("industry", "")
+            except Exception:
+                pass
+
         from operator1.clients.canonical_translator import translate_profile
         profile = translate_profile(raw, self.market_id)
         self._write_cache(identifier, "profile.json", profile)
         return profile
 
-    def get_income_statement(self, identifier: str) -> pd.DataFrame: return pd.DataFrame()
-    def get_balance_sheet(self, identifier: str) -> pd.DataFrame: return pd.DataFrame()
-    def get_cashflow_statement(self, identifier: str) -> pd.DataFrame: return pd.DataFrame()
-    def get_quotes(self, identifier: str) -> pd.DataFrame: return pd.DataFrame()
-    def get_peers(self, identifier: str) -> list[str]: return []
-    def get_executives(self, identifier: str) -> list[dict[str, Any]]: return []
+    # -- Financial statements ------------------------------------------------
+
+    def get_income_statement(self, identifier: str) -> pd.DataFrame:
+        """Fetch income statements (stub -- BSE/NSE don't provide structured financials via API)."""
+        return pd.DataFrame()
+
+    def get_balance_sheet(self, identifier: str) -> pd.DataFrame:
+        """Fetch balance sheets (stub)."""
+        return pd.DataFrame()
+
+    def get_cashflow_statement(self, identifier: str) -> pd.DataFrame:
+        """Fetch cash flow statements (stub)."""
+        return pd.DataFrame()
+
+    # -- Price data -----------------------------------------------------------
+
+    def get_quotes(self, identifier: str) -> pd.DataFrame:
+        """Fetch OHLCV price data via jugaad-data or BSE API.
+
+        jugaad-data provides NSE historical data with proper OHLCV format.
+        Research: .roo/research/in-bse-2026-02-24.md Section A2
+        """
+        if self._jugaad_available:
+            try:
+                from jugaad_data.nse import stock_df
+
+                end_date = date.today()
+                start_date = end_date - timedelta(days=730)
+
+                # jugaad-data: stock_df(symbol, from_date, to_date, series)
+                df = stock_df(
+                    symbol=identifier.upper(),
+                    from_date=start_date,
+                    to_date=end_date,
+                    series="EQ",
+                )
+
+                if df is not None and not df.empty:
+                    # Normalize column names
+                    col_map = {
+                        "DATE": "date",
+                        "OPEN": "open",
+                        "HIGH": "high",
+                        "LOW": "low",
+                        "CLOSE": "close",
+                        "VOLUME": "volume",
+                        "LTP": "close",  # Last Traded Price as fallback
+                    }
+                    # Case-insensitive rename
+                    df.columns = [c.upper() for c in df.columns]
+                    df = df.rename(columns=col_map)
+
+                    ohlcv_cols = ["date", "open", "high", "low", "close", "volume"]
+                    available = [c for c in ohlcv_cols if c in df.columns]
+                    df = df[available]
+
+                    if "date" in df.columns:
+                        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+
+                    return df
+
+            except Exception as exc:
+                logger.debug("jugaad-data quotes failed for %s: %s", identifier, exc)
+
+        return pd.DataFrame()
+
+    # -- Peers / related entities --------------------------------------------
+
+    def get_peers(self, identifier: str) -> list[str]:
+        return []
+
+    def get_executives(self, identifier: str) -> list[dict[str, Any]]:
+        return []

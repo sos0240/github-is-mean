@@ -260,6 +260,71 @@ def _validate_api_data(
     logger.info("")
 
 
+def _run_personal_data_checks(
+    company: str,
+    country: str,
+    market_id: str,
+    market_info,
+    secrets: dict,
+    interactive: bool = False,
+) -> None:
+    """Run personal data checks on user input and wrapper requirements.
+
+    Checks two things:
+    1. Whether the user's input (company/country) contains PII
+    2. Whether the resolved market's API requires personal data for registration
+
+    In interactive mode, prompts the user. In non-interactive mode, logs warnings.
+    This is never a hard blocker -- the pipeline continues regardless.
+    """
+    try:
+        from operator1.clients.personal_data_guard import (
+            check_user_input_for_pii,
+            check_wrapper_personal_data,
+            format_pii_warning,
+        )
+        from operator1.clients.llm_factory import create_llm_client
+
+        # Build LLM client for the PII check
+        llm_client = None
+        try:
+            llm_client = create_llm_client(secrets)
+        except Exception:
+            pass
+
+        # Check 1: User input PII
+        if company:
+            input_result = check_user_input_for_pii(company, country, llm_client)
+            if input_result.has_personal_data:
+                warning = format_pii_warning(input_result)
+                logger.warning("Personal data detected in user input:")
+                for line in warning.splitlines():
+                    logger.warning("  %s", line)
+                if interactive:
+                    resp = input("  Continue with this input? [y/N]: ").strip().lower()
+                    if resp not in ("y", "yes"):
+                        logger.info("User cancelled due to personal data warning.")
+                        sys.exit(0)
+
+        # Check 2: Wrapper registration requirements
+        wrapper_result = check_wrapper_personal_data(market_id, llm_client)
+        if wrapper_result.has_personal_data:
+            warning = format_pii_warning(wrapper_result)
+            logger.warning("Market API registration requires personal data:")
+            for line in warning.splitlines():
+                logger.warning("  %s", line)
+            if hasattr(market_info, "input_requirements") and market_info.input_requirements:
+                logger.warning("  Registration requires: %s", market_info.input_requirements)
+        elif wrapper_result.market_personal_data_level == "low":
+            logger.info(
+                "Note: %s requires basic registration (%s)",
+                market_info.pit_api_name,
+                wrapper_result.details,
+            )
+    except Exception as exc:
+        logger.debug("Personal data check failed (non-blocking): %s", exc)
+
+
 def _create_pit_client(market_id: str, secrets: dict):
     """Instantiate the PIT client for a given market_id.
 
@@ -466,6 +531,18 @@ Non-interactive examples:
         market_info.country,
         market_info.exchange,
         market_info.pit_api_name,
+    )
+
+    # ------------------------------------------------------------------
+    # Personal data guard: check user input and wrapper requirements
+    # ------------------------------------------------------------------
+    _run_personal_data_checks(
+        company=args.company,
+        country=getattr(market_info, "country", ""),
+        market_id=market_id,
+        market_info=market_info,
+        secrets=secrets,
+        interactive=not args.company,  # interactive if no --company CLI arg
     )
 
     # Create the PIT client for this market

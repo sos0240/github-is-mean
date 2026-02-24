@@ -160,18 +160,15 @@ class UKCompaniesHouseClient:
         return self._fetch_financials_from_filings(identifier, "cashflow")
 
     def _fetch_financials_from_filings(self, identifier: str, statement_type: str) -> pd.DataFrame:
-        """Fetch financial data from Companies House filing history.
+        """Fetch financial data from Companies House filing history + iXBRL parsing.
 
-        WARNING -- KNOWN LIMITATION (Research Log: .roo/research/uk-companies-house-2026-02-24.md):
-        Companies House REST API does NOT return financial line items
-        (revenue, assets, etc.) in the filing-history endpoint. Financial
-        data is embedded inside iXBRL documents attached to filings.
-        This method currently returns ONLY filing metadata (dates, form
-        types) with NO actual financial values. To get real numbers, we
-        would need to download and parse iXBRL documents, which is not
-        yet implemented.
+        Strategy (Research Log: .roo/research/uk-companies-house-2026-02-24.md):
+        1. Get filing history from REST API (dates, transaction IDs)
+        2. For each filing with accounts, try to download and parse the iXBRL document
+        3. Extract financial values using ixbrl-parse (if installed) or regex fallback
+        4. Map iXBRL tags to canonical fields via _UKGAAP_MAP
 
-        The gov API endpoints used here are verified correct as of 2026-02-24:
+        Gov API endpoints verified correct as of 2026-02-24:
         - GET /company/{id}/filing-history?category=accounts
         """
         try:
@@ -188,20 +185,27 @@ class UKCompaniesHouseClient:
             filing_date = item.get("date", "")
             description = item.get("description", "")
             period_end = item.get("action_date", filing_date)
+            transaction_id = item.get("transaction_id", "")
 
-            # Companies House accounts contain basic financial info
-            # in the description and metadata
             if "accounts" not in description.lower() and "annual" not in description.lower():
                 continue
 
-            rows.append({
+            # Try to extract financial values from iXBRL document
+            ixbrl_values = {}
+            if transaction_id:
+                ixbrl_values = self._extract_ixbrl_values(identifier, transaction_id)
+
+            row: dict = {
                 "filing_date": filing_date,
                 "report_date": period_end,
                 "form": item.get("type", ""),
                 "description": description,
-                "transaction_id": item.get("transaction_id", ""),
+                "transaction_id": transaction_id,
                 "period_type": "annual",
-            })
+            }
+            # Merge extracted financial values into the row
+            row.update(ixbrl_values)
+            rows.append(row)
 
         if not rows:
             return pd.DataFrame()
@@ -211,19 +215,105 @@ class UKCompaniesHouseClient:
             if col in df.columns:
                 df[col] = pd.to_datetime(df[col], errors="coerce")
 
-        # Cache filings
-        for period_end, group in df.groupby("report_date"):
-            period_str = pd.Timestamp(period_end).strftime("%Y-%m-%d")
-            records = group.to_dict(orient="records")
-            for r in records:
-                for k, v in r.items():
-                    if isinstance(v, pd.Timestamp):
-                        r[k] = v.isoformat()
-            self._write_cache(identifier, f"filings/{period_str}.json",
-                            {"period_end": period_str, "rows": records})
-
         from operator1.clients.canonical_translator import translate_financials
         return translate_financials(df, self.market_id, statement_type)
+
+    def _extract_ixbrl_values(self, identifier: str, transaction_id: str) -> dict[str, float]:
+        """Download and parse an iXBRL document from Companies House.
+
+        Uses ixbrl-parse library (if installed) for structured extraction,
+        with regex fallback for common UK-GAAP tags.
+
+        Research: .roo/research/unofficial-wrapper-discovery-2026-02-24.md
+        Library: ixbrl-parse v0.10.1 (MIT license)
+        """
+        values: dict[str, float] = {}
+
+        # Download the document
+        try:
+            import requests
+            doc_url = f"https://find-and-update.company-information.service.gov.uk/company/{identifier}/filing-history/{transaction_id}/document"
+            headers = {"Accept": "application/xhtml+xml, text/html", "User-Agent": "Operator1/1.0"}
+            if self._api_key:
+                import base64
+                encoded = base64.b64encode(f"{self._api_key}:".encode()).decode()
+                headers["Authorization"] = f"Basic {encoded}"
+
+            resp = requests.get(doc_url, headers=headers, timeout=30, allow_redirects=True)
+            if resp.status_code != 200 or not resp.content:
+                return values
+
+            html_content = resp.text
+        except Exception as exc:
+            logger.debug("iXBRL download failed for %s/%s: %s", identifier, transaction_id, exc)
+            return values
+
+        # Try ixbrl-parse library first
+        try:
+            from ixbrlparse import IXBRL
+            import io
+
+            ixbrl_doc = IXBRL(io.StringIO(html_content))
+            from operator1.clients.canonical_translator import _UKGAAP_MAP, _IFRS_MAP
+
+            combined_map = {**_UKGAAP_MAP, **_IFRS_MAP}
+
+            for item in ixbrl_doc.numeric:
+                concept = item.get("name", "") if isinstance(item, dict) else getattr(item, "name", "")
+                value = item.get("value", None) if isinstance(item, dict) else getattr(item, "value", None)
+
+                if concept and value is not None:
+                    # Try full concept name and bare name
+                    canonical = combined_map.get(concept) or combined_map.get(concept.split(":")[-1] if ":" in concept else concept)
+                    if canonical:
+                        try:
+                            values[canonical] = float(value)
+                        except (ValueError, TypeError):
+                            continue
+
+            if values:
+                logger.debug("ixbrl-parse extracted %d values from %s/%s", len(values), identifier, transaction_id)
+                return values
+
+        except ImportError:
+            logger.debug("ixbrl-parse not installed; trying regex fallback for iXBRL")
+        except Exception as exc:
+            logger.debug("ixbrl-parse failed for %s/%s: %s", identifier, transaction_id, exc)
+
+        # Regex fallback: extract ix:nonFraction elements from the HTML
+        try:
+            import re
+            from operator1.clients.canonical_translator import _UKGAAP_MAP, _IFRS_MAP
+            combined_map = {**_UKGAAP_MAP, **_IFRS_MAP}
+
+            # Match ix:nonFraction elements: <ix:nonFraction name="uk-gaap:Turnover" ...>VALUE</ix:nonFraction>
+            pattern = re.compile(
+                r'<ix:nonFraction[^>]*name="([^"]+)"[^>]*>([\d,.\-()]+)</ix:nonFraction>',
+                re.IGNORECASE,
+            )
+            for match in pattern.finditer(html_content):
+                concept = match.group(1)
+                raw_value = match.group(2).replace(",", "").strip()
+
+                canonical = combined_map.get(concept)
+                if not canonical:
+                    bare = concept.split(":")[-1] if ":" in concept else concept
+                    canonical = combined_map.get(bare)
+
+                if canonical and raw_value:
+                    try:
+                        val = float(raw_value.replace("(", "-").replace(")", ""))
+                        values[canonical] = val
+                    except (ValueError, TypeError):
+                        continue
+
+            if values:
+                logger.debug("Regex extracted %d iXBRL values from %s/%s", len(values), identifier, transaction_id)
+
+        except Exception as exc:
+            logger.debug("iXBRL regex fallback failed: %s", exc)
+
+        return values
 
     def get_quotes(self, identifier: str) -> pd.DataFrame:
         return pd.DataFrame()

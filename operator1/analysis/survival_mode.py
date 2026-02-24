@@ -197,6 +197,66 @@ def compute_country_survival_flag(
 
 
 # ---------------------------------------------------------------------------
+# LLM-enhanced strategic sector check
+# ---------------------------------------------------------------------------
+
+# Cache LLM responses per sector/country pair to avoid repeated API calls
+_llm_strategic_cache: dict[str, bool] = {}
+
+
+def _check_strategic_sector_via_llm(sector: str, country: str = "") -> bool:
+    """Ask the LLM whether a sector is strategically important for a country.
+
+    This supplements the static YAML strategic_sectors list with dynamic
+    assessment based on recent policy data. The LLM can catch sectors
+    that became strategic due to recent government policy changes.
+
+    Returns True if the LLM considers the sector strategic, False otherwise.
+    Non-blocking: returns False on any failure.
+    """
+    if not sector:
+        return False
+
+    cache_key = f"{sector.lower()}:{country.lower()}"
+    if cache_key in _llm_strategic_cache:
+        return _llm_strategic_cache[cache_key]
+
+    try:
+        from operator1.clients.llm_factory import create_llm_client
+        from operator1.secrets_loader import load_secrets
+
+        secrets = load_secrets()
+        llm_client = create_llm_client(secrets)
+        if llm_client is None:
+            return False
+
+        country_ctx = f" in {country}" if country else ""
+        prompt = (
+            f"Is the '{sector}' sector considered strategically important "
+            f"for the government{country_ctx}? Consider: national security, "
+            f"critical infrastructure, recent industrial policy, government "
+            f"subsidies, and 'too big to fail' designations.\n\n"
+            f"Answer ONLY 'YES' or 'NO'."
+        )
+
+        response = llm_client.generate(prompt)
+        if response:
+            is_strategic = response.strip().upper().startswith("YES")
+            _llm_strategic_cache[cache_key] = is_strategic
+            if is_strategic:
+                logger.info(
+                    "LLM flagged sector '%s'%s as strategically important",
+                    sector, country_ctx,
+                )
+            return is_strategic
+    except Exception as exc:
+        logger.debug("LLM strategic sector check failed (non-blocking): %s", exc)
+
+    _llm_strategic_cache[cache_key] = False
+    return False
+
+
+# ---------------------------------------------------------------------------
 # Country protection
 # ---------------------------------------------------------------------------
 
@@ -233,10 +293,22 @@ def compute_country_protected_flag(
 
     conditions: list[pd.Series] = []
 
-    # 1. Strategic sector
+    # 1. Strategic sector (YAML config baseline)
     strategic = config.get("strategic_sectors", [])
     sector_lower = target_sector.lower().strip()
     is_strategic = any(s.lower().strip() == sector_lower for s in strategic)
+
+    # 1b. LLM-enhanced strategic sector check (hybrid approach)
+    # If the YAML list doesn't flag this sector, ask the LLM whether
+    # the company's sector is considered strategically important for
+    # the country. The LLM can incorporate recent policy changes that
+    # the static YAML list may not reflect.
+    if not is_strategic and target_sector:
+        is_strategic = _check_strategic_sector_via_llm(
+            target_sector,
+            country=df.attrs.get("country", "") if hasattr(df, "attrs") else "",
+        )
+
     if is_strategic:
         # Entire series is 1
         conditions.append(pd.Series(True, index=df.index))

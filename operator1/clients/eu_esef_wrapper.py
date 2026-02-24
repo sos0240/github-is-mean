@@ -120,9 +120,17 @@ class EUEsefClient:
         filings = self._get_recent_filings()
         seen: dict[str, dict] = {}
         for f in filings:
-            lei = f.get("entity", {}).get("lei", "")
-            name = f.get("entity", {}).get("name", "")
-            country = f.get("entity", {}).get("country", "")
+            # filings.xbrl.org returns JSON:API format:
+            # { "type": "filing", "id": "...", "attributes": {...}, "relationships": {...} }
+            # Research Log: .roo/research/eu-esef-2026-02-24.md (Section B1-B3)
+            attrs = f.get("attributes", f)  # fallback to f itself if flat format
+            entity = f.get("entity", {})    # may be embedded or empty
+
+            # Entity info: try embedded entity first, then attributes
+            lei = entity.get("lei", "") or attrs.get("lei", "")
+            name = entity.get("name", "") or attrs.get("entity_name", "") or attrs.get("filer_name", "")
+            country = entity.get("country", "") or attrs.get("country", "")
+
             if self._country_code and country != self._country_code:
                 continue
             key = lei or name
@@ -209,20 +217,31 @@ class EUEsefClient:
         extracts IFRS concepts from the XBRL data.
         """
         filings = self._get_recent_filings()
-        entity_filings = [
-            f for f in filings
-            if identifier.lower() in (f.get("entity", {}).get("name", "").lower())
-            or identifier.lower() in (f.get("entity", {}).get("lei", "").lower())
-        ]
+        # Match entity filings -- handle both JSON:API and flat formats
+        entity_filings = []
+        for f in filings:
+            attrs = f.get("attributes", f)
+            entity = f.get("entity", {})
+            f_name = (entity.get("name", "") or attrs.get("entity_name", "") or attrs.get("filer_name", "")).lower()
+            f_lei = (entity.get("lei", "") or attrs.get("lei", "")).lower()
+            if identifier.lower() in f_name or identifier.lower() in f_lei:
+                entity_filings.append(f)
 
         if not entity_filings:
             return pd.DataFrame()
 
         rows: list[dict] = []
         for filing in entity_filings[:8]:
-            filing_date = filing.get("date_added", filing.get("processed", ""))
-            period_end = filing.get("period", {}).get("end_date", "")
-            period_start = filing.get("period", {}).get("start_date", "")
+            # JSON:API format: fields are inside "attributes"
+            # Research: .roo/research/eu-esef-2026-02-24.md (Section B1)
+            attrs = filing.get("attributes", filing)
+            filing_date = attrs.get("date_added", attrs.get("processed", ""))
+            period_end = attrs.get("period_end", "")
+            if not period_end:
+                period_end = attrs.get("period", {}).get("end_date", "") if isinstance(attrs.get("period"), dict) else ""
+            period_start = attrs.get("period_start", "")
+            if not period_start:
+                period_start = attrs.get("period", {}).get("start_date", "") if isinstance(attrs.get("period"), dict) else ""
 
             # Extract XBRL facts from the filing
             facts = filing.get("facts", {})

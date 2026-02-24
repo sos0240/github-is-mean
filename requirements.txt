@@ -46,13 +46,24 @@ edgartools>=5.15            # US SEC EDGAR (primary) -- v5.15+ required: cash_fl
 sec-edgar-api>=1.0         # US SEC EDGAR (fallback)
 edinet-tools>=0.3          # Japan EDINET (primary) -- v0.3+ required: API changed (entity/search/documents)
 dart-fss>=0.4              # South Korea DART (primary)
-pyesef>=1.0                # EU ESEF XBRL parsing
-pycvm>=0.4                 # Brazil CVM data
+# pyesef -- REMOVED: library archived 2026-01-03 (graceful degradation in eu_esef_wrapper.py)
+# pycvm -- optional: file-based API, br_cvm_wrapper.py uses direct HTTP as primary path
+pycvm>=0.4                 # Brazil CVM data (optional, used for local file parsing)
+
+# Phase 2: Tier 2 market wrappers (optional -- graceful degradation if not installed)
+# akshare>=1.18             # China SSE/SZSE (comprehensive: stocks, financials, macro) -- research: .roo/research/cn-sse-2026-02-24.md
+# jugaad-data>=0.29         # India NSE/BSE (stock data, RBI rates) -- research: .roo/research/in-bse-2026-02-24.md
+# ixbrl-parse>=0.10         # UK Companies House iXBRL financial extraction -- research: .roo/research/unofficial-wrapper-discovery-2026-02-24.md
+
+# Phase 2b: Privacy & NER (optional -- local PII detection without network calls)
+# spacy>=3.5               # Local NER for personal data detection (12MB model: en_core_web_sm)
+# After installing: python -m spacy download en_core_web_sm
 
 # Phase 3: Macro data libraries
 fredapi>=0.5               # US FRED (replaces manual HTTP calls)
 wbgapi>=1.0                # World Bank global fallback (200+ countries)
 sdmx1>=2.0                 # SDMX: ECB, OECD, Eurostat, INSEE (successor to pandasdmx, pydantic v2 compatible)
+# imf-reader>=1.4           # IMF global macro fallback (190+ countries) -- research: .roo/research/macro-imf-reader-2026-02-24.md
 
 # Testing
 pytest>=7.0

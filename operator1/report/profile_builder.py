@@ -1122,6 +1122,50 @@ def build_company_profile(
     }
 
     # ------------------------------------------------------------------
+    # Accounting standard caveat (cross-standard comparison warning)
+    # ------------------------------------------------------------------
+    try:
+        from operator1.clients.canonical_translator import MARKET_ACCOUNTING_STANDARD
+        market_id = ""
+        if verified_target:
+            market_id = verified_target.get("market_id", "") if isinstance(verified_target, dict) else getattr(verified_target, "market_id", "")
+        accounting_standard = MARKET_ACCOUNTING_STANDARD.get(market_id, "Unknown")
+        profile["meta"]["accounting_standard"] = accounting_standard
+        if accounting_standard not in ("US-GAAP", "IFRS", "Unknown"):
+            profile["meta"]["cross_standard_caveat"] = (
+                f"This company reports under {accounting_standard}. "
+                f"Cross-market comparisons with US-GAAP or IFRS companies "
+                f"should note that similarly named metrics (e.g., EBIT, "
+                f"operating income) may be defined differently across standards."
+            )
+    except Exception:
+        pass
+
+    # ------------------------------------------------------------------
+    # Estimation transparency: mark which fields are estimated vs observed
+    # ------------------------------------------------------------------
+    if cache is not None and not cache.empty:
+        estimated_fields: list[str] = []
+        observed_fields: list[str] = []
+        for col in cache.columns:
+            missing_flag = f"is_missing_{col}"
+            if missing_flag in cache.columns:
+                pct_missing = float(cache[missing_flag].mean())
+                if pct_missing > 0.5:
+                    estimated_fields.append(col)
+                else:
+                    observed_fields.append(col)
+        if estimated_fields:
+            profile.setdefault("data_quality", {})
+            profile["data_quality"]["estimated_fields"] = estimated_fields[:30]
+            profile["data_quality"]["n_estimated"] = len(estimated_fields)
+            profile["data_quality"]["n_observed"] = len(observed_fields)
+            profile["data_quality"]["estimation_note"] = (
+                f"{len(estimated_fields)} fields have >50% estimated values. "
+                f"These are marked with [E] in the report where applicable."
+            )
+
+    # ------------------------------------------------------------------
     # Promote extended_models sub-keys to profile root so the report
     # generator can find them under the keys it already expects.
     # ------------------------------------------------------------------
