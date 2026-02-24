@@ -819,7 +819,7 @@ Non-interactive examples:
     # ------------------------------------------------------------------
     # Step 4a: Fetch macro data for survival mode analysis
     # ------------------------------------------------------------------
-    macro_data = {}          # raw dict[str, pd.Series] from macro_client
+    macro_data = {}          # raw dict[str, pd.Series] (macro APIs removed)
     macro_dataset = None     # MacroDataset for downstream modules
     macro_quadrant_result = None
 

@@ -513,10 +513,10 @@ class KRDartClient:
             self._write_cache(identifier, f"filings/{period_str}.json",
                             {"period_end": period_str, "rows": records})
 
-    # -- Price data (delegated to ohlcv_provider) ----------------------------
+    # -- Price data ------------------------------------------------------------
 
     def get_quotes(self, identifier: str) -> pd.DataFrame:
-        """DART does not provide OHLCV. Handled by ohlcv_provider."""
+        """DART does not provide OHLCV data. Returns empty DataFrame."""
         return pd.DataFrame()
 
     # -- Peers / executives --------------------------------------------------

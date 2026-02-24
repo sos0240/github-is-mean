@@ -158,7 +158,7 @@ class TestUSEdgarProtocol:
         assert hasattr(client, "get_executives")
 
     def test_get_quotes_returns_empty(self, client):
-        """OHLCV is handled by ohlcv_provider, not this client."""
+        """SEC EDGAR does not provide OHLCV data."""
         df = client.get_quotes("AAPL")
         assert isinstance(df, pd.DataFrame)
         assert df.empty

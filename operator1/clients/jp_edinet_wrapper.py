@@ -529,10 +529,10 @@ class JPEdinetClient:
         }
         return label_map.get(concept_lower)
 
-    # -- Price data (delegated to ohlcv_provider) ----------------------------
+    # -- Price data ------------------------------------------------------------
 
     def get_quotes(self, identifier: str) -> pd.DataFrame:
-        """EDINET does not provide OHLCV. Handled by ohlcv_provider."""
+        """EDINET does not provide OHLCV data. Returns empty DataFrame."""
         return pd.DataFrame()
 
     # -- Peers / executives --------------------------------------------------

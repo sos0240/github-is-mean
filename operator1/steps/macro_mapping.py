@@ -96,9 +96,8 @@ def fetch_macro_data(
 
     This function supports two modes:
 
-    1. **Pre-fetched** -- pass ``macro_raw`` (output of
-       ``macro_client.fetch_macro_indicators()``) to convert it into
-       a ``MacroDataset`` without re-fetching.
+    1. **Pre-fetched** -- pass ``macro_raw`` (dict of indicator Series)
+       to convert it into a ``MacroDataset`` without re-fetching.
     2. **Auto-fetch** -- pass ``market_id`` (or ``macro_api_info``) to
        have this function resolve the macro API and fetch the data.
 
@@ -113,7 +112,7 @@ def fetch_macro_data(
         A ``MacroAPIInfo`` instance from the registry.  Takes priority
         over ``market_id`` lookup.
     macro_raw:
-        Pre-fetched dict from ``macro_client.fetch_macro_indicators()``.
+        Pre-fetched dict of indicator name -> pd.Series.
         When provided, no HTTP calls are made.
     secrets:
         API key dictionary (for macro sources that require registration).
