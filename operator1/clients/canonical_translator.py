@@ -405,6 +405,36 @@ _USGAAP_MAP: dict[str, str] = {
     "PaymentsForRepurchaseOfCommonStock": "share_buyback",
 }
 
+# Market -> accounting standard label (for cross-standard comparison caveats)
+MARKET_ACCOUNTING_STANDARD: dict[str, str] = {
+    "us_sec_edgar": "US-GAAP",
+    "uk_companies_house": "UK-GAAP / IFRS",
+    "eu_esef": "IFRS",
+    "fr_esef": "IFRS",
+    "de_esef": "IFRS",
+    "jp_edinet": "JPPFS (Japan GAAP) / IFRS",
+    "kr_dart": "K-IFRS",
+    "tw_mops": "TIFRS (Taiwan IFRS)",
+    "br_cvm": "BR-GAAP / IFRS",
+    "cl_cmf": "IFRS (Chile)",
+    "cn_sse": "CAS (Chinese Accounting Standards)",
+    "in_bse": "Ind AS (IFRS-converged)",
+    "ca_sedar": "IFRS / US-GAAP",
+    "au_asx": "AASB (IFRS-based)",
+    "hk_hkex": "HKFRS (IFRS-identical)",
+    "sg_sgx": "SFRS(I) (IFRS-identical)",
+    "mx_bmv": "IFRS",
+    "za_jse": "IFRS",
+    "ch_six": "IFRS / Swiss GAAP",
+    "sa_tadawul": "IFRS",
+    "ae_dfm": "IFRS",
+    "nl_esef": "IFRS",
+    "es_esef": "IFRS",
+    "it_esef": "IFRS",
+    "se_esef": "IFRS",
+}
+
+
 # Master mapping: market_id -> concept map
 _MARKET_CONCEPT_MAPS: dict[str, dict[str, str]] = {
     "us_sec_edgar": _USGAAP_MAP,

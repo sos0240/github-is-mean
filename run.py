@@ -460,21 +460,21 @@ def choose_data_source_mode() -> str:
     """
     print(_bold("  Choose data source mode:"))
     print("")
-    print(f"    {_bold('1')}. {_green('Wrappers only')} (recommended)")
-    print("       Uses unofficial wrapper libraries (edgartools, dart-fss, etc.)")
+    print(f"    {_bold('1')}. {_green('Standard')} (recommended)")
+    print("       Uses wrapper libraries with automatic gov API fallback")
     print(f"       {_dim('No extra API keys needed. Simplest setup.')}")
     print("")
-    print(f"    {_bold('2')}. {_yellow('API + Wrappers together')}")
-    print("       Uses raw API endpoints alongside wrappers for richer data")
-    print(f"       {_dim('May require market-specific API keys (all free).')}")
+    print(f"    {_bold('2')}. {_yellow('Enhanced (may need API keys)')}")
+    print("       Prompts for market-specific API keys for direct gov API access")
+    print(f"       {_dim('All API keys are free. Provides richer data coverage.')}")
     print("")
 
     choice = _prompt("Select mode (1/2)", "1")
     if choice == "2":
-        _ok("Mode: API + Wrappers (enhanced data)")
+        _ok("Mode: Enhanced (API keys + wrappers)")
         return "api_and_wrappers"
     else:
-        _ok("Mode: Wrappers only (recommended)")
+        _ok("Mode: Standard (auto wrapper + gov API fallback)")
         return "wrappers"
 
 
@@ -915,7 +915,7 @@ def main() -> int:
     print(f"  Market:           {_bold(market.country)} ({market.pit_api_name})")
     print(f"  Company:          {_bold(company)}")
     print(f"  Country:          {country}")
-    print(f"  Data mode:        {'API + Wrappers' if data_mode == 'api_and_wrappers' else 'Wrappers only'}")
+    print(f"  Data mode:        {'Enhanced (API keys)' if data_mode == 'api_and_wrappers' else 'Standard'}")
     if macro:
         print(f"  Macro source:     {macro.api_name}")
     print(f"  Linked entities:  {'Yes' if not skip_linked else 'Skip'}")

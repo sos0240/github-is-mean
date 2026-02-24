@@ -61,7 +61,58 @@ def _check_pii_regex(text: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# LLM-based PII detection
+# Local NER-based PII detection (spaCy -- no network calls)
+# ---------------------------------------------------------------------------
+
+# Module-level cache for the spaCy model (loaded once)
+_nlp_model = None
+_nlp_load_attempted = False
+
+
+def _get_nlp():
+    """Load spaCy NER model (cached after first call)."""
+    global _nlp_model, _nlp_load_attempted
+    if _nlp_load_attempted:
+        return _nlp_model
+    _nlp_load_attempted = True
+    try:
+        import spacy
+        _nlp_model = spacy.load("en_core_web_sm")
+        logger.debug("spaCy NER model loaded for local PII detection")
+    except (ImportError, OSError):
+        logger.debug("spaCy not available; NER PII check disabled")
+    return _nlp_model
+
+
+def _check_pii_ner(text: str) -> list[str]:
+    """Check text for personal names using local spaCy NER.
+
+    Uses Named Entity Recognition to distinguish PERSON entities
+    from ORG entities. Runs fully locally with zero network calls.
+
+    Returns a list of warning strings if PERSON entities are found.
+    """
+    nlp = _get_nlp()
+    if nlp is None:
+        return []
+
+    warnings: list[str] = []
+    try:
+        doc = nlp(text)
+        for ent in doc.ents:
+            if ent.label_ == "PERSON":
+                warnings.append(
+                    f"Input '{ent.text}' appears to be a personal name "
+                    f"(detected by local NER), not a company"
+                )
+    except Exception:
+        pass  # NER failure is non-blocking
+
+    return warnings
+
+
+# ---------------------------------------------------------------------------
+# LLM-based PII detection (fallback -- only if NER is inconclusive)
 # ---------------------------------------------------------------------------
 
 _PII_CHECK_PROMPT = """\
@@ -128,7 +179,15 @@ def check_user_input_for_pii(
         result.details = "Regex-based PII detection flagged potential personal data."
         return result
 
-    # Step 2: LLM-based check (if available)
+    # Step 2: Local NER check (fast, no network call, privacy-preserving)
+    ner_warnings = _check_pii_ner(company)
+    if ner_warnings:
+        result.has_personal_data = True
+        result.warnings.extend(ner_warnings)
+        result.details = "Local NER model detected a personal name in the input."
+        return result
+
+    # Step 3: LLM-based check (fallback -- only if NER is unavailable/inconclusive)
     if llm_client is not None:
         try:
             prompt = _PII_CHECK_PROMPT.format(company=company, country=country)
