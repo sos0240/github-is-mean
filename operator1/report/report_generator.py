@@ -298,8 +298,8 @@ def _build_company_overview(profile: dict[str, Any]) -> str:
         return "Company identity data unavailable."
 
     lines = [
-        f"| Field | Value |",
-        f"|-------|-------|",
+        "| Field | Value |",
+        "|-------|-------|",
         f"| **Name** | {identity.get('name', 'N/A')} |",
         f"| **ISIN** | {identity.get('isin', 'N/A')} |",
         f"| **Ticker** | {identity.get('ticker', 'N/A')} |",
@@ -1469,8 +1469,8 @@ def _build_graph_risk_section(profile: dict[str, Any]) -> str:
         "### Contagion Risk (Domino Effect)",
         "",
         f"- **Spillover probability**: {_pct(gr.get('contagion_target_infection_prob'))}",
-        f"  *(If any linked company enters financial distress, this is the estimated "
-        f"probability that the trouble spreads to affect this company.)*",
+        "  *(If any linked company enters financial distress, this is the estimated "
+        "probability that the trouble spreads to affect this company.)*",
         f"- **Expected companies affected in a crisis**: {_fmt(gr.get('contagion_expected_infected'), '.1f')}",
         "",
         "### Supply Chain Concentration Risk",

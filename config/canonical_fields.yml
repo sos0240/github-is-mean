@@ -210,6 +210,92 @@ capex_asof:
   mode: direct
   tier: null
 
+investing_cf_asof:
+  category: decision
+  source: pit_cashflow_statement
+  mode: direct
+  tier: null
+
+financing_cf_asof:
+  category: decision
+  source: pit_cashflow_statement
+  mode: direct
+  tier: null
+
+dividends_paid_asof:
+  category: decision
+  source: pit_cashflow_statement
+  mode: direct
+  tier: null
+
+# -- Additional income statement line items --
+cost_of_revenue_asof:
+  category: decision
+  source: pit_income_statement
+  mode: direct
+  tier: null
+
+operating_income_asof:
+  category: decision
+  source: pit_income_statement
+  mode: direct
+  tier: null
+
+taxes_asof:
+  category: decision
+  source: pit_income_statement
+  mode: direct
+  tier: null
+
+research_and_development_asof:
+  category: decision
+  source: pit_income_statement
+  mode: direct
+  tier: null
+
+sga_expense_asof:
+  category: decision
+  source: pit_income_statement
+  mode: direct
+  tier: null
+
+# -- Additional balance sheet line items --
+retained_earnings_asof:
+  category: decision
+  source: pit_balance_sheet
+  mode: direct
+  tier: null
+
+goodwill_asof:
+  category: decision
+  source: pit_balance_sheet
+  mode: direct
+  tier: null
+
+intangible_assets_asof:
+  category: decision
+  source: pit_balance_sheet
+  mode: direct
+  tier: null
+
+receivables_asof:
+  category: decision
+  source: pit_balance_sheet
+  mode: direct
+  tier: null
+
+inventory_asof:
+  category: decision
+  source: pit_balance_sheet
+  mode: direct
+  tier: null
+
+payables_asof:
+  category: decision
+  source: pit_balance_sheet
+  mode: direct
+  tier: null
+
 # ===========================================================================
 # Derived decision variables (computed daily)
 # ===========================================================================

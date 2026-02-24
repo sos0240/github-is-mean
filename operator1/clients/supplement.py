@@ -24,8 +24,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import pandas as pd
-
 from operator1.http_utils import cached_get, cached_post, HTTPError
 
 logger = logging.getLogger(__name__)

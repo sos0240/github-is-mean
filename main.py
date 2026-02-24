@@ -435,8 +435,6 @@ Non-interactive examples:
         logger.error("Create a .env file from .env.example with your keys")
         return 1
 
-    gemini_key = secrets.get("GEMINI_API_KEY", "")
-
     # ------------------------------------------------------------------
     # Report-only mode
     # ------------------------------------------------------------------

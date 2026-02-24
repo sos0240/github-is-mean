@@ -15,7 +15,6 @@ Spec ref: The_Apps_core_idea.pdf Section A
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any
 
 from operator1.config_loader import load_config

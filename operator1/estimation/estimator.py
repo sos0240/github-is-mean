@@ -49,9 +49,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from operator1.constants import CACHE_DIR, EPSILON
+from operator1.constants import CACHE_DIR
 from operator1.config_loader import load_config
-from operator1.features.derived_variables import DERIVED_VARIABLES
 
 logger = logging.getLogger(__name__)
 
