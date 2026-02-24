@@ -425,7 +425,39 @@ def _build_financial_health(profile: dict[str, Any]) -> str:
 
     # Vanity Assessment
     lines.extend(["", "### Capital Allocation Efficiency (Vanity Assessment)", ""])
-    if vanity.get("available"):
+
+    if vanity.get("v2_available"):
+        # V2 composite score
+        v2_score = vanity.get("v2_score", {})
+        lines.append(f"- **Capital discipline score**: {_fmt(v2_score.get('latest'), '.1f')} / 100")
+        lines.append(f"- **Assessment**: {vanity.get('v2_label', 'N/A')}")
+        lines.append(f"- **Trend**: {vanity.get('v2_trend', 'N/A')}")
+        lines.append(f"- **21-day average**: {_fmt(vanity.get('v2_score_21d', {}).get('mean'), '.1f')}")
+        lines.append("")
+
+        # Component breakdown
+        breakdown = vanity.get("v2_breakdown", {})
+        _component_labels = {
+            "vanity_rnd_mismatch": "R&D vs Growth Mismatch",
+            "vanity_sga_bloat_v2": "SGA Bloat (peer-relative)",
+            "vanity_capital_misallocation": "Capital Misallocation",
+            "vanity_competitive_decay": "Competitive Decay",
+            "vanity_sentiment_gap": "Sentiment-Reality Gap",
+        }
+        if breakdown:
+            lines.append("**Component Breakdown:**")
+            lines.append("")
+            for comp_key, comp_label in _component_labels.items():
+                val = breakdown.get(comp_key)
+                lines.append(f"- {comp_label}: {_fmt(val, '.1f')} / 100")
+            lines.append("")
+
+        lines.append("*Lower scores indicate more disciplined capital allocation. "
+                     "Scores above 40 suggest potential misallocation; above 70 "
+                     "indicates significant wasteful spending patterns.*")
+
+    elif vanity.get("available"):
+        # Legacy fallback
         lines.append(f"- **Current period vanity expenditure**: {_fmt(vanity.get('latest'), '.1f')}% of revenue")
         lines.append(f"- **Historical average**: {_fmt(vanity.get('mean'), '.1f')}%")
         lines.append(f"- **Peak**: {_fmt(vanity.get('max'), '.1f')}%")

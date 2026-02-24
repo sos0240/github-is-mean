@@ -623,3 +623,55 @@ real_return_1d:
   mode: derived
   formula: "nominal_return_1d - inflation_rate_daily_equivalent"
   tier: null
+
+# ===========================================================================
+# Vanity v2 -- Capital allocation quality scoring
+# ===========================================================================
+vanity_rnd_mismatch:
+  category: decision
+  source: derived
+  mode: derived
+  formula: "score(rnd_intensity vs revenue_growth)"
+  tier: null
+
+vanity_sga_bloat_v2:
+  category: decision
+  source: derived
+  mode: derived
+  formula: "score(sga_ratio vs peers, margin_decline)"
+  tier: null
+
+vanity_capital_misallocation:
+  category: decision
+  source: derived
+  mode: derived
+  formula: "score(debt_trend + liquidity_decline + dividend_while_insolvent)"
+  tier: null
+
+vanity_competitive_decay:
+  category: decision
+  source: derived
+  mode: derived
+  formula: "score(competitive_pressure + peer_rank_decline + margin_squeeze)"
+  tier: null
+
+vanity_sentiment_gap:
+  category: decision
+  source: derived
+  mode: derived
+  formula: "score(positive_sentiment * health_decline)"
+  tier: null
+
+vanity_score:
+  category: decision
+  source: derived
+  mode: derived
+  formula: "weighted_composite(rnd, sga, capital, decay, sentiment)"
+  tier: null
+
+vanity_score_21d:
+  category: decision
+  source: derived
+  mode: derived
+  formula: "rolling_mean(vanity_score, 21)"
+  tier: null

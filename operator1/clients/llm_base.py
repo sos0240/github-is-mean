@@ -587,8 +587,12 @@ REPORT STRUCTURE (MUST INCLUDE ALL 13 SECTIONS):
 5. SURVIVAL MODE ANALYSIS
    - Current survival status (company, country, protection)
    - Historical survival episodes (count and duration)
-   - Vanity expenditure analysis and interpretation
-   - What vanity spending reveals about management discipline
+   - Capital allocation quality (vanity score): composite 0-100 score measuring \
+management discipline. Components: R&D vs Growth Mismatch, SGA Bloat (peer-relative), \
+Capital Misallocation (debt/dividend signals), Competitive Decay (losing ground), \
+Sentiment-Reality Gap (positive PR vs declining fundamentals). Labels: Disciplined (<20), \
+Moderate (20-40), Wasteful (40-70), Reckless (>70). Interpret the trend (rising/falling/stable) \
+and explain which components drive the score. Relate to management quality for investors.
 
 6. LINKED VARIABLES & MARKET CONTEXT
    - **Peer Ranking**: percentile rank of target vs peer group on key metrics. \
