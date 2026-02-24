@@ -305,6 +305,50 @@ _DART_MAP: dict[str, str] = {
     "유형자산의 취득": "capex",
 }
 
+# Chinese Accounting Standards (CAS) -- Simplified Chinese field names
+# Used by akshare/Sina Finance for SSE/SZSE data
+# Research: .roo/research/cn-sse-2026-02-24.md
+_CAS_MAP: dict[str, str] = {
+    # Income statement (利润表)
+    "营业收入": "revenue",
+    "营业总收入": "revenue",
+    "营业成本": "cost_of_revenue",
+    "营业总成本": "cost_of_revenue",
+    "营业利润": "operating_income",
+    "利润总额": "ebit",
+    "净利润": "net_income",
+    "归属于母公司所有者的净利润": "net_income",
+    "所得税费用": "taxes",
+    "利息支出": "interest_expense",
+    "财务费用": "interest_expense",
+    "销售费用": "sga_expense",
+    "管理费用": "sga_expense",
+    "研发费用": "research_and_development",
+    "毛利润": "gross_profit",
+    # Balance sheet (资产负债表)
+    "资产总计": "total_assets",
+    "负债合计": "total_liabilities",
+    "所有者权益合计": "total_equity",
+    "归属于母公司所有者权益合计": "total_equity",
+    "流动资产合计": "current_assets",
+    "流动负债合计": "current_liabilities",
+    "货币资金": "cash_and_equivalents",
+    "短期借款": "short_term_debt",
+    "长期借款": "long_term_debt",
+    "未分配利润": "retained_earnings",
+    "商誉": "goodwill",
+    "无形资产": "intangible_assets",
+    "应收账款": "receivables",
+    "存货": "inventory",
+    "应付账款": "payables",
+    # Cash flow (现金流量表)
+    "经营活动产生的现金流量净额": "operating_cash_flow",
+    "投资活动产生的现金流量净额": "investing_cf",
+    "筹资活动产生的现金流量净额": "financing_cf",
+    "购建固定资产、无形资产和其他长期资产支付的现金": "capex",
+    "分配股利、利润或偿付利息支付的现金": "dividends_paid",
+}
+
 # US GAAP concepts (SEC EDGAR) -- already canonical in the client,
 # but included here for completeness and for cross-referencing
 _USGAAP_MAP: dict[str, str] = {
@@ -382,7 +426,7 @@ _MARKET_CONCEPT_MAPS: dict[str, dict[str, str]] = {
     "ca_sedar": {**_IFRS_MAP, **_USGAAP_MAP},     # Canada: IFRS + some US GAAP filers
     "au_asx": _IFRS_MAP,                           # Australia: AASB (IFRS-based)
     "in_bse": _IFRS_MAP,                           # India: Ind AS (IFRS-converged)
-    "cn_sse": _IFRS_MAP,                           # China: CAS (IFRS-converging)
+    "cn_sse": {**_CAS_MAP, **_IFRS_MAP},             # China: CAS (Simplified Chinese) + IFRS fallback
     "hk_hkex": _IFRS_MAP,                          # Hong Kong: HKFRS (IFRS-identical)
     "sg_sgx": _IFRS_MAP,                           # Singapore: SFRS(I) (IFRS-identical)
     "mx_bmv": _IFRS_MAP,                           # Mexico: IFRS mandatory
