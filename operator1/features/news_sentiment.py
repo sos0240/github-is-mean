@@ -127,6 +127,13 @@ def _fetch_news_alpha_vantage(symbol: str) -> pd.DataFrame:
         return pd.DataFrame()
 
     try:
+        # Check shared Alpha Vantage daily rate limit (25 req/day free tier)
+        # Research: .roo/research/ohlcv-alpha-vantage-2026-02-24.md Section 3b
+        from operator1.clients.ohlcv_provider import _check_av_daily_limit, _increment_av_counter
+        if not _check_av_daily_limit():
+            logger.debug("Alpha Vantage daily limit reached -- skipping news fetch")
+            return pd.DataFrame()
+
         from operator1.http_utils import cached_get
         data = cached_get(
             "https://www.alphavantage.co/query",
@@ -137,6 +144,7 @@ def _fetch_news_alpha_vantage(symbol: str) -> pd.DataFrame:
                 "apikey": api_key,
             },
         )
+        _increment_av_counter()  # Decrement shared daily limit
         if not isinstance(data, dict):
             return pd.DataFrame()
 

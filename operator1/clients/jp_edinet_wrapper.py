@@ -128,12 +128,21 @@ class JPEdinetClient:
         ]
 
     def search_company(self, name: str) -> list[dict[str, Any]]:
-        """Search for a Japanese company by name, ticker, or EDINET code."""
-        # Try edinet-tools search first
+        """Search for a Japanese company by name, ticker, or EDINET code.
+
+        VERIFIED AGAINST OFFICIAL DOCS:
+        - Date: 2026-02-24
+        - Version: edinet-tools@0.3.0
+        - Docs: https://github.com/matthelmer/edinet-tools
+        - Research Log: .roo/research/jp-edinet-2026-02-24.md
+        - edinet-tools v0.3.0 API: edinet_tools.search(query, limit=N)
+        """
+        # Try edinet-tools search first (v0.3.0 API)
         if self._edinet_tools_available:
             try:
                 import edinet_tools
-                results = edinet_tools.search_companies(name)
+                # v0.3.0: edinet_tools.search(query, limit=N)
+                results = edinet_tools.search(name, limit=20)
                 if results:
                     return [
                         {
@@ -152,29 +161,15 @@ class JPEdinetClient:
         return self.list_companies(query=name)
 
     def _fetch_company_list(self) -> list[dict[str, Any]]:
-        """Build company list from edinet-tools or by scanning recent filings."""
-        companies: list[dict[str, Any]] = []
+        """Build company list by scanning recent EDINET filings.
 
-        if self._edinet_tools_available:
-            try:
-                import edinet_tools
-                supported = edinet_tools.get_supported_companies()
-                if supported:
-                    for co in supported:
-                        companies.append({
-                            "ticker": getattr(co, "sec_code", "")[:4] if hasattr(co, "sec_code") else "",
-                            "name": getattr(co, "name", ""),
-                            "edinet_code": getattr(co, "edinet_code", ""),
-                            "cik": getattr(co, "edinet_code", ""),
-                            "exchange": "TSE",
-                            "market_id": self.market_id,
-                        })
-                    if companies:
-                        return companies
-            except Exception as exc:
-                logger.debug("edinet-tools company list failed: %s", exc)
-
-        # Fallback: scan recent EDINET filings
+        VERIFIED: edinet-tools v0.3.0 does NOT have get_supported_companies().
+        The entity lookup is per-company, not bulk. We use the gov API
+        filing scan as the primary method for building the company list.
+        Research Log: .roo/research/jp-edinet-2026-02-24.md
+        """
+        # edinet-tools v0.3.0 doesn't provide a bulk company list.
+        # Use the gov API filing scan to discover entities.
         return self._scan_recent_filings_for_companies()
 
     def _scan_recent_filings_for_companies(self) -> list[dict[str, Any]]:
@@ -229,11 +224,13 @@ class JPEdinetClient:
 
         raw_profile: dict[str, Any] = {}
 
-        # Try edinet-tools first
+        # Try edinet-tools first (v0.3.0 API: edinet_tools.entity())
+        # Research Log: .roo/research/jp-edinet-2026-02-24.md
         if self._edinet_tools_available:
             try:
                 import edinet_tools
-                info = edinet_tools.get_company_info(identifier)
+                # v0.3.0: edinet_tools.entity(identifier) -- lookup by ticker or name
+                info = edinet_tools.entity(identifier)
                 if info:
                     raw_profile = {
                         "name": getattr(info, "name", ""),
@@ -309,31 +306,47 @@ class JPEdinetClient:
         return self._fetch_via_direct_api(identifier, statement_type)
 
     def _fetch_via_edinet_tools(self, identifier: str, statement_type: str) -> pd.DataFrame | None:
-        """Use edinet-tools to get structured financial data."""
+        """Use edinet-tools v0.3.0 to get structured financial data.
+
+        VERIFIED AGAINST OFFICIAL DOCS:
+        - Date: 2026-02-24
+        - Version: edinet-tools@0.3.0
+        - Docs: https://github.com/matthelmer/edinet-tools
+        - Research Log: .roo/research/jp-edinet-2026-02-24.md
+        - v0.3.0 API: entity(), documents(), doc.parse()
+        """
         import edinet_tools
 
-        # Resolve to edinet code if needed
-        info = edinet_tools.resolve_company(identifier)
+        # v0.3.0: edinet_tools.entity(identifier) for company lookup
+        try:
+            info = edinet_tools.entity(identifier)
+        except Exception:
+            info = None
         if not info:
             return None
 
-        # Get recent documents
+        # v0.3.0: entity.documents(days=N) for recent filings
         docs = []
         try:
-            # Search for annual and quarterly reports in the last 2 years
-            for days_back in [0, 90, 180, 270, 365, 450, 540, 630, 730]:
-                target_date = (date.today() - timedelta(days=days_back)).isoformat()
-                try:
-                    day_docs = edinet_tools.api.get_documents(target_date)
-                    if day_docs:
-                        for d in day_docs:
-                            edinet_code = getattr(d, "edinet_code", "")
-                            if edinet_code == getattr(info, "edinet_code", "NONE"):
-                                docs.append(d)
-                except Exception:
-                    continue
+            entity_docs = info.documents(days=730)  # 2 years of filings
+            if entity_docs:
+                docs = list(entity_docs)
         except Exception:
-            pass
+            # Fallback: scan by date using edinet_tools.documents(date)
+            try:
+                for days_back in [0, 90, 180, 270, 365, 450, 540, 630, 730]:
+                    target_date = (date.today() - timedelta(days=days_back)).isoformat()
+                    try:
+                        day_docs = edinet_tools.documents(target_date)
+                        if day_docs:
+                            for d in day_docs:
+                                edinet_code = getattr(d, "edinet_code", "")
+                                if edinet_code == getattr(info, "edinet_code", "NONE"):
+                                    docs.append(d)
+                    except Exception:
+                        continue
+            except Exception:
+                pass
 
         if not docs:
             return None

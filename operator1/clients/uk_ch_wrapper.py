@@ -162,9 +162,17 @@ class UKCompaniesHouseClient:
     def _fetch_financials_from_filings(self, identifier: str, statement_type: str) -> pd.DataFrame:
         """Fetch financial data from Companies House filing history.
 
-        Companies House stores financial data in iXBRL documents within
-        filed accounts. We extract filing metadata and parse available
-        structured data.
+        WARNING -- KNOWN LIMITATION (Research Log: .roo/research/uk-companies-house-2026-02-24.md):
+        Companies House REST API does NOT return financial line items
+        (revenue, assets, etc.) in the filing-history endpoint. Financial
+        data is embedded inside iXBRL documents attached to filings.
+        This method currently returns ONLY filing metadata (dates, form
+        types) with NO actual financial values. To get real numbers, we
+        would need to download and parse iXBRL documents, which is not
+        yet implemented.
+
+        The gov API endpoints used here are verified correct as of 2026-02-24:
+        - GET /company/{id}/filing-history?category=accounts
         """
         try:
             data = self._get(

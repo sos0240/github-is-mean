@@ -42,9 +42,9 @@ matplotlib>=3.6
 # plotly>=5.13
 
 # Phase 1: Unofficial wrappers for core markets
-edgartools>=4.0            # US SEC EDGAR (primary)
+edgartools>=5.15            # US SEC EDGAR (primary) -- v5.15+ required: cash_flow()->cashflow_statement() rename
 sec-edgar-api>=1.0         # US SEC EDGAR (fallback)
-edinet-tools>=0.1          # Japan EDINET (primary)
+edinet-tools>=0.3          # Japan EDINET (primary) -- v0.3+ required: API changed (entity/search/documents)
 dart-fss>=0.4              # South Korea DART (primary)
 pyesef>=1.0                # EU ESEF XBRL parsing
 pycvm>=0.4                 # Brazil CVM data
