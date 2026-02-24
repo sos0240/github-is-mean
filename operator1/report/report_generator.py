@@ -3023,9 +3023,9 @@ def generate_report(
     output_dir:
         Directory for all report outputs.  Defaults to ``cache/report/``.
     generate_pdf:
-        If True, attempt to create a PDF via pandoc.
+        If True, create a PDF via pandoc for this tier.
     generate_chart_images:
-        If True, generate chart PNGs.
+        If True, generate chart PNGs (premium only).
     tier:
         Report tier controlling how many sections are included.
         Defaults to PREMIUM (all 22 sections).
@@ -3098,9 +3098,9 @@ def generate_report(
         chart_dir = out / "charts"
         chart_paths = generate_charts(cache, profile, chart_dir)
 
-    # Step 4: Optional PDF (only for premium)
+    # Step 4: Optional PDF (all tiers)
     pdf_path: str | None = None
-    if generate_pdf and tier == ReportTier.PREMIUM:
+    if generate_pdf:
         pdf_path = _generate_pdf(md_path, out / f"{tier.value}_report.pdf")
 
     return {
@@ -3134,9 +3134,9 @@ def generate_all_reports(
     output_dir:
         Directory for all report outputs.
     generate_pdf:
-        If True, generate PDF for premium report.
+        If True, generate PDF for all three report tiers.
     generate_chart_images:
-        If True, generate chart PNGs for premium report.
+        If True, generate chart PNGs (premium report only).
 
     Returns
     -------
