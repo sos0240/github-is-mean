@@ -212,6 +212,187 @@ df = sgs.get({
 
 ---
 
+---
+
+## COMPLETE INPUT REQUIREMENTS SUMMARY (ALL LIBRARIES)
+
+### 1. yfinance -- Global OHLCV
+```python
+# yf.download() -- VERBATIM from source
+yf.download(
+    tickers,                # REQUIRED: str or list -- "AAPL" or ["AAPL", "MSFT"]
+    start=None,             # optional: str "YYYY-MM-DD" or datetime
+    end=None,               # optional: str "YYYY-MM-DD" or datetime
+    period=None,            # optional: "1d","5d","1mo","3mo","6mo","1y","2y","5y","10y","ytd","max"
+    interval="1d",          # optional: "1m","2m","5m","15m","30m","60m","90m","1h","1d","5d","1wk","1mo","3mo"
+    auto_adjust=True,       # IMPORTANT: set False for raw OHLCV
+    progress=True,          # set False for pipeline use
+    threads=True,           # multi-threaded
+    timeout=10,             # request timeout seconds
+)
+# Returns: pd.DataFrame with columns: Open, High, Low, Close, Adj Close, Volume
+# Index: DatetimeIndex
+# NO API key needed. NO authentication.
+
+# Ticker suffixes by market:
+#   US: AAPL       UK: BP.L        France: AIR.PA    Germany: SIE.DE
+#   Japan: 7203.T  Korea: 005930.KS  Taiwan: 2330.TW  Brazil: PETR4.SA
+#   Chile: SQM.SN  Canada: RY.TO   Australia: BHP.AX  India: RELIANCE.NS
+#   China: 600519.SS  HK: 0700.HK  Singapore: D05.SI  Mexico: AMXL.MX
+#   S.Africa: NPN.JO  Switzerland: NESN.SW  Saudi: 2222.SR  UAE: EMAAR.AE
+```
+
+### 2. wbgapi -- Global Macro
+```python
+import wbgapi as wb
+
+# wb.data.DataFrame() -- VERBATIM from source
+wb.data.DataFrame(
+    series,                 # REQUIRED: str or list -- "NY.GDP.MKTP.CD" or ["NY.GDP.MKTP.CD", "FP.CPI.TOTL.ZG"]
+    economy='all',          # optional: str or list -- "USA" or ["USA", "GBR"] (ISO-3 codes)
+    time='all',             # optional: str, int, or range -- "YR2020" or range(2015, 2025)
+    mrv=None,               # optional: int -- most recent N values (e.g., mrv=10)
+    mrnev=None,             # optional: int -- most recent N non-empty values
+    skipBlanks=False,       # optional: skip empty observations
+    labels=False,           # optional: include dimension names
+    skipAggs=False,         # optional: skip aggregate economies
+    numericTimeKeys=False,  # optional: use 2020 instead of "YR2020"
+    db=None,                # optional: database ID (default: 2 = WDI)
+)
+# Returns: pd.DataFrame
+# Index: economy code
+# Columns: time periods (YR2020, YR2021, etc.)
+# NO API key needed. NO authentication.
+
+# Key indicator IDs:
+#   GDP growth: NY.GDP.MKTP.KD.ZG    Inflation: FP.CPI.TOTL.ZG
+#   Interest rate: FR.INR.RINR        Unemployment: SL.UEM.TOTL.ZS
+#   Exchange rate: PA.NUS.FCRF        GDP current USD: NY.GDP.MKTP.CD
+
+# Country codes (ISO-2 -> ISO-3 for WB):
+#   US->USA  GB->GBR  EU->EMU  FR->FRA  DE->DEU  JP->JPN
+#   KR->KOR  TW->(not covered)  BR->BRA  CL->CHL  CA->CAN
+#   AU->AUS  IN->IND  CN->CHN  HK->HKG  SG->SGP  MX->MEX
+#   ZA->ZAF  CH->CHE  SA->SAU  AE->ARE
+```
+
+### 3. pykrx -- Korea OHLCV
+```python
+from pykrx import stock
+
+# VERBATIM from source
+stock.get_market_ohlcv_by_date(
+    fromdate,               # REQUIRED: str "YYYYMMDD" -- e.g., "20200101"
+    todate,                 # REQUIRED: str "YYYYMMDD" -- e.g., "20251231"
+    ticker,                 # REQUIRED: str -- Korean stock code, e.g., "005930" (Samsung)
+    freq="d",               # optional: "d" (daily), "m" (monthly), "y" (yearly)
+    adjusted=True,          # optional: adjusted prices (set False for raw)
+    name_display=False,     # optional: show column names in Korean
+)
+# Returns: pd.DataFrame with Korean column headers (시가/고가/저가/종가/거래량)
+#   meaning: open/high/low/close/volume
+# Index: DatetimeIndex
+# NO API key needed.
+```
+
+### 4. akshare -- China OHLCV + Macro
+```python
+import akshare as ak
+
+# OHLCV -- VERBATIM from source
+ak.stock_zh_a_hist(
+    symbol="000001",        # REQUIRED: str -- 6-digit stock code (no suffix)
+    period="daily",         # optional: "daily", "weekly", "monthly"
+    start_date="19700101",  # optional: str "YYYYMMDD"
+    end_date="20500101",    # optional: str "YYYYMMDD"
+    adjust="",              # optional: "" (raw/no adjust), "qfq" (forward), "hfq" (backward)
+    timeout=None,           # optional: request timeout
+)
+# Returns: pd.DataFrame with columns (Chinese):
+#   日期/开盘/收盘/最高/最低/成交量/成交额/振幅/涨跌幅/涨跌额/换手率
+#   meaning: date/open/close/high/low/volume/turnover/amplitude/change_pct/change_amount/turnover_rate
+# NO API key needed.
+
+# Macro -- China GDP
+ak.macro_china_gdp()  # No arguments needed, returns full history
+# Macro -- China CPI
+ak.macro_china_cpi()  # No arguments needed
+```
+
+### 5. jugaad-data -- India OHLCV
+```python
+from jugaad_data.nse import stock_df
+from datetime import date
+
+# VERBATIM from source
+stock_df(
+    symbol,                 # REQUIRED: str -- NSE symbol, e.g., "RELIANCE"
+    from_date,              # REQUIRED: datetime.date -- e.g., date(2020, 1, 1)
+    to_date,                # REQUIRED: datetime.date -- e.g., date(2025, 12, 31)
+    series="EQ",            # optional: "EQ" (equity), "BE" (T+2), etc.
+)
+# Returns: pd.DataFrame with columns: DATE, OPEN, HIGH, LOW, CLOSE, LTP, VOLUME, etc.
+# NO API key needed.
+```
+
+### 6. python-bcb -- Brazil Macro
+```python
+from bcb import sgs
+
+# VERBATIM from README
+sgs.get(
+    codes,                  # REQUIRED: dict -- {"name": series_id} e.g., {"selic": 432}
+    start=None,             # optional: str "YYYY-MM-DD" -- e.g., "2020-01-01"
+    end=None,               # optional: str "YYYY-MM-DD"
+)
+# Returns: pd.DataFrame with DatetimeIndex
+# NO API key needed.
+
+# Key series IDs:
+#   SELIC rate: 432          IPCA inflation: 433
+#   GDP: 4380                USD/BRL exchange: 1
+#   Unemployment: 24369
+```
+
+### 7. twstock -- Taiwan OHLCV
+```python
+import twstock
+
+# VERBATIM from README
+stock = twstock.Stock(code)  # REQUIRED: str -- TWSE stock code, e.g., "2330" (TSMC)
+stock.fetch_from(year, month)  # REQUIRED: int, int -- e.g., (2020, 1)
+
+# Properties after fetch:
+#   stock.date       -- list of datetime.date
+#   stock.open       -- list of float (open prices)
+#   stock.high       -- list of float
+#   stock.low        -- list of float
+#   stock.close      -- list of float
+#   stock.capacity   -- list of int (volume)
+#   stock.price      -- alias for close
+# NO API key needed.
+```
+
+### 8. pandas-datareader -- OECD/Eurostat Macro
+```python
+import pandas_datareader as pdr
+
+# World Bank
+pdr.wb.download(
+    indicator,              # REQUIRED: str -- e.g., "NY.GDP.MKTP.CD"
+    country,                # REQUIRED: str or list -- ISO-2 codes, e.g., "US" or ["US", "GB"]
+    start,                  # REQUIRED: int -- start year, e.g., 2015
+    end,                    # REQUIRED: int -- end year, e.g., 2025
+)
+# Returns: pd.DataFrame
+
+# OECD
+pdr.DataReader(name, 'oecd')  # name: str -- dataset name, e.g., "GDP"
+# NO API key needed for World Bank/OECD/Eurostat.
+```
+
+---
+
 ## FINAL RECOMMENDATIONS
 
 ### Must-have (install immediately):
