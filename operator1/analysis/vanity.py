@@ -104,7 +104,7 @@ def _rnd_growth_mismatch(df: pd.DataFrame) -> pd.Series:
         rnd_intensity = rnd_intensity.replace([np.inf, -np.inf], np.nan)
 
     # Revenue growth (252-day trailing pct change, approximating annual)
-    rev_growth = revenue.pct_change(periods=min(252, max(1, len(revenue) - 1)))
+    rev_growth = revenue.pct_change(periods=min(252, max(1, len(revenue) - 1)), fill_method=None)
     rev_growth = rev_growth.replace([np.inf, -np.inf], np.nan)
 
     # Score: mismatch penalty when R&D intensity > 10% and growth < 0
@@ -214,7 +214,7 @@ def _capital_misallocation(df: pd.DataFrame) -> pd.Series:
 
     # Signal 1: Debt rising + liquidity declining
     if total_debt.notna().any() and liq_score.notna().any():
-        debt_delta = total_debt.pct_change(21).clip(-1, 1)
+        debt_delta = total_debt.pct_change(21, fill_method=None).clip(-1, 1)
         liq_delta = liq_score - liq_score.shift(21)
         # Debt up AND liquidity down
         signal1 = (debt_delta.clip(lower=0) * 50) + ((-liq_delta).clip(lower=0) * 0.5)
@@ -233,7 +233,7 @@ def _capital_misallocation(df: pd.DataFrame) -> pd.Series:
     # Signal 3: Excessive leverage without growth
     if nd_ebitda.notna().any():
         leverage_excess = (nd_ebitda - 4.0).clip(lower=0) * 10.0
-        rev_growth = revenue.pct_change(252).clip(-1, 1).fillna(0)
+        rev_growth = revenue.pct_change(252, fill_method=None).clip(-1, 1).fillna(0)
         # Penalize only if no revenue growth
         growth_offset = rev_growth.clip(lower=0) * 100.0
         signal3 = (leverage_excess - growth_offset).clip(lower=0)
@@ -599,7 +599,7 @@ def compute_vanity_score(
     }
 
     composite = pd.Series(0.0, index=result.index)
-    total_weight = 0.0
+    total_weight = pd.Series(0.0, index=result.index)
     any_v2 = pd.Series(False, index=result.index)
 
     for col, w in v2_components.items():

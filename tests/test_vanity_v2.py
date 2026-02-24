@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from operator1.analysis.vanity import (
     _rnd_growth_mismatch,

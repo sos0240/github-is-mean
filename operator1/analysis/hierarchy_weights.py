@@ -285,10 +285,9 @@ def compute_hierarchy_weights(
         vp = vanity_pct.iloc[idx]
         # Amplify adjustment when vanity trend is rising
         effective_cfg = dict(vanity_cfg)
-        trend_val = vanity_trend.iloc[idx] if vanity_trend is not None else np.nan
+        trend_val = vanity_trend.iloc[idx]
         if trend_val == "rising":
             multiplier = vanity_cfg.get("rising_trend_multiplier", 1.0)
-            effective_cfg = dict(vanity_cfg)
             effective_cfg["tier1_delta"] = vanity_cfg.get("tier1_delta", 0.05) * multiplier
             effective_cfg["tier4_delta"] = vanity_cfg.get("tier4_delta", -0.02) * multiplier
             effective_cfg["tier5_delta"] = vanity_cfg.get("tier5_delta", -0.03) * multiplier
