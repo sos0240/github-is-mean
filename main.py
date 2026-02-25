@@ -440,11 +440,12 @@ Non-interactive examples:
     logger.info("=" * 60)
 
     try:
-        from operator1.secrets_loader import load_secrets
+        from operator1.secrets_loader import load_secrets, validate_secrets
         secrets = load_secrets()
+        validate_secrets(secrets)
     except SystemExit as exc:
         logger.error("Failed to load API keys: %s", exc)
-        logger.error("Create a .env file from .env.example with your keys")
+        logger.error("Create a .env file from .env.example with ALL keys filled in")
         return 1
 
     # ------------------------------------------------------------------
