@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 CANONICAL_INCOME = {
     "revenue", "gross_profit", "operating_income", "ebit", "ebitda",
     "net_income", "taxes", "interest_expense", "cost_of_revenue",
-    "research_and_development", "sga_expense",
+    "rd_expenses", "sga_expenses", "eps_basic", "eps_diluted",
 }
 
 # Balance sheet canonical names
@@ -78,8 +78,8 @@ _IFRS_MAP: dict[str, str] = {
     "ifrs-full:ProfitLossBeforeTax": "ebit",
     "ifrs-full:IncomeTaxExpenseContinuingOperations": "taxes",
     "ifrs-full:FinanceCosts": "interest_expense",
-    "ifrs-full:SellingGeneralAndAdministrativeExpense": "sga_expense",
-    "ifrs-full:ResearchAndDevelopmentExpense": "research_and_development",
+    "ifrs-full:SellingGeneralAndAdministrativeExpense": "sga_expenses",
+    "ifrs-full:ResearchAndDevelopmentExpense": "rd_expenses",
     # Balance sheet
     "ifrs-full:Assets": "total_assets",
     "ifrs-full:Liabilities": "total_liabilities",
@@ -115,7 +115,7 @@ _JPPFS_MAP: dict[str, str] = {
     "jppfs_cor:ProfitLossAttributableToOwnersOfParent": "net_income",
     "jppfs_cor:IncomeTaxes": "taxes",
     "jppfs_cor:InterestExpense": "interest_expense",
-    "jppfs_cor:SellingGeneralAndAdministrativeExpenses": "sga_expense",
+    "jppfs_cor:SellingGeneralAndAdministrativeExpenses": "sga_expenses",
     # Balance sheet
     "jppfs_cor:TotalAssets": "total_assets",
     "jppfs_cor:TotalLiabilities": "total_liabilities",
@@ -148,8 +148,8 @@ _TIFRS_MAP: dict[str, str] = {
     "稅前淨利（淨損）": "ebit",
     "所得稅費用（利益）": "taxes",
     "利息費用": "interest_expense",
-    "推銷費用": "sga_expense",
-    "研究發展費用": "research_and_development",
+    "推銷費用": "sga_expenses",
+    "研究發展費用": "rd_expenses",
     # Balance sheet
     "資產總計": "total_assets",
     "負債總計": "total_liabilities",
@@ -280,7 +280,7 @@ _DART_MAP: dict[str, str] = {
     "법인세비용": "taxes",
     "이자비용": "interest_expense",
     "금융비용": "interest_expense",
-    "판매비와관리비": "sga_expense",
+    "판매비와관리비": "sga_expenses",
     # Balance sheet
     "자산총계": "total_assets",
     "부채총계": "total_liabilities",
@@ -321,9 +321,9 @@ _CAS_MAP: dict[str, str] = {
     "所得税费用": "taxes",
     "利息支出": "interest_expense",
     "财务费用": "interest_expense",
-    "销售费用": "sga_expense",
-    "管理费用": "sga_expense",
-    "研发费用": "research_and_development",
+    "销售费用": "sga_expenses",
+    "管理费用": "sga_expenses",
+    "研发费用": "rd_expenses",
     "毛利润": "gross_profit",
     # Balance sheet (资产负债表)
     "资产总计": "total_assets",
@@ -386,8 +386,8 @@ _USGAAP_MAP: dict[str, str] = {
     "EarningsPerShareDiluted": "eps_diluted",
     "IncomeTaxExpenseBenefit": "taxes",
     "InterestExpense": "interest_expense",
-    "SellingGeneralAndAdministrativeExpense": "sga_expense",
-    "ResearchAndDevelopmentExpense": "research_and_development",
+    "SellingGeneralAndAdministrativeExpense": "sga_expenses",
+    "ResearchAndDevelopmentExpense": "rd_expenses",
     "Assets": "total_assets",
     "Liabilities": "total_liabilities",
     "StockholdersEquity": "total_equity",
@@ -402,7 +402,7 @@ _USGAAP_MAP: dict[str, str] = {
     "NetCashProvidedByUsedInFinancingActivities": "financing_cf",
     "PaymentsToAcquirePropertyPlantAndEquipment": "capex",
     "PaymentsOfDividends": "dividends_paid",
-    "PaymentsForRepurchaseOfCommonStock": "share_buyback",
+    "PaymentsForRepurchaseOfCommonStock": "stock_buybacks",
 }
 
 # Market -> accounting standard label (for cross-standard comparison caveats)
@@ -817,28 +817,50 @@ def pivot_to_canonical_wide(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+# Alias map: old / variant field names produced by clients -> canonical names
+# that cache_builder.STATEMENT_FIELDS expects.  Clients are not changed;
+# this bridge ensures their output flows into the app correctly.
+_FIELD_ALIASES: dict[str, str] = {
+    "sga_expense": "sga_expenses",
+    "research_and_development": "rd_expenses",
+    "share_buyback": "stock_buybacks",
+    "buybacks": "stock_buybacks",
+    "operating_cashflow": "operating_cash_flow",
+    "investing_cashflow": "investing_cf",
+    "financing_cashflow": "financing_cf",
+    "pretax_income": "ebit",
+}
+
+
 def _map_concept(concept: str, concept_map: dict[str, str]) -> str:
     """Map a raw concept name to its canonical equivalent.
 
-    Tries exact match first, then prefix-stripped match, then fuzzy suffix match.
+    Tries exact match first, then prefix-stripped match, then alias
+    resolution, then checks if the concept is already a canonical name.
     """
     if not concept:
         return ""
 
-    # Exact match
+    # Exact match in the market-specific concept map
     if concept in concept_map:
-        return concept_map[concept]
+        result = concept_map[concept]
+        # Apply alias resolution on the mapped result too
+        return _FIELD_ALIASES.get(result, result)
 
     # Strip namespace prefix and retry (e.g. "ifrs-full:Revenue" -> "Revenue")
     if ":" in concept:
         short = concept.split(":")[-1]
         for key, canonical in concept_map.items():
             if key.endswith(short):
-                return canonical
+                return _FIELD_ALIASES.get(canonical, canonical)
+
+    # Check alias map (handles client output that uses old/variant names)
+    concept_lower = concept.lower().replace(" ", "_")
+    if concept_lower in _FIELD_ALIASES:
+        return _FIELD_ALIASES[concept_lower]
 
     # Try case-insensitive match on the concept value itself
     # (handles cases where the concept IS already the canonical name)
-    concept_lower = concept.lower().replace(" ", "_")
     all_canonical = (
         CANONICAL_INCOME | CANONICAL_BALANCE | CANONICAL_CASHFLOW
     )

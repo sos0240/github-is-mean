@@ -19,7 +19,11 @@ import pandas as pd
 
 from operator1.clients.pit_base import PITClientError
 from operator1.clients.equity_provider import EquityProvider
-from operator1.clients.canonical_translator import translate_financials, translate_profile
+from operator1.clients.canonical_translator import (
+    translate_financials,
+    translate_profile,
+    pivot_to_canonical_wide,
+)
 from operator1.config_loader import get_global_config
 from operator1.constants import CACHE_DIR, RAW_CACHE_DIR, DATE_START, DATE_END
 from operator1.steps.verify_identifiers import VerifiedTarget
@@ -101,6 +105,33 @@ def _read_json(isin: str, name: str) -> Any:
 
 
 # ---------------------------------------------------------------------------
+# Long-to-wide format bridge
+# ---------------------------------------------------------------------------
+
+def _ensure_wide_format(df: pd.DataFrame) -> pd.DataFrame:
+    """Bridge between wrapper output and cache_builder expectations.
+
+    Some wrappers call translate_financials() internally, which returns
+    long-format data (rows with ``canonical_name`` and ``value`` columns).
+    The cache_builder's ``_asof_merge_statement()`` expects wide-format
+    data (one column per canonical field, e.g. ``revenue``, ``net_income``).
+
+    This function detects long-format output and pivots it to wide format,
+    preserving ``filing_date`` and ``report_date`` columns for PIT joins.
+    Wide-format data passes through unchanged.
+    """
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    # Detect long format: has both 'canonical_name' and 'value' columns
+    if "canonical_name" in df.columns and "value" in df.columns:
+        return pivot_to_canonical_wide(df)
+
+    # Already wide format (e.g. J-Quants, or direct column names) -- pass through
+    return df
+
+
+# ---------------------------------------------------------------------------
 # Per-entity extraction
 # ---------------------------------------------------------------------------
 
@@ -151,7 +182,11 @@ def _fetch_entity_data(
         entity.income_statement = _read_df(isin, "income_statement")
     else:
         try:
-            entity.income_statement = pit_client.get_income_statement(isin)
+            raw_income = pit_client.get_income_statement(isin)
+            # Bridge: if the wrapper returned long-format data (concept/value
+            # columns from translate_financials), pivot to the wide format
+            # that cache_builder expects (one column per canonical field).
+            entity.income_statement = _ensure_wide_format(raw_income)
             if not entity.income_statement.empty:
                 _write_df(isin, "income_statement", entity.income_statement)
         except (PITClientError, Exception) as exc:
@@ -162,7 +197,8 @@ def _fetch_entity_data(
         entity.balance_sheet = _read_df(isin, "balance_sheet")
     else:
         try:
-            entity.balance_sheet = pit_client.get_balance_sheet(isin)
+            raw_balance = pit_client.get_balance_sheet(isin)
+            entity.balance_sheet = _ensure_wide_format(raw_balance)
             if not entity.balance_sheet.empty:
                 _write_df(isin, "balance_sheet", entity.balance_sheet)
         except (PITClientError, Exception) as exc:
@@ -173,7 +209,8 @@ def _fetch_entity_data(
         entity.cashflow_statement = _read_df(isin, "cashflow_statement")
     else:
         try:
-            entity.cashflow_statement = pit_client.get_cashflow_statement(isin)
+            raw_cashflow = pit_client.get_cashflow_statement(isin)
+            entity.cashflow_statement = _ensure_wide_format(raw_cashflow)
             if not entity.cashflow_statement.empty:
                 _write_df(isin, "cashflow_statement", entity.cashflow_statement)
         except (PITClientError, Exception) as exc:

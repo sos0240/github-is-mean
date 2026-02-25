@@ -67,7 +67,7 @@ QUOTE_FIELDS = (
 
 # Financial-statement decision variables (Sec 8)
 STATEMENT_FIELDS = (
-    "revenue", "gross_profit", "ebit", "ebitda", "net_income",
+    "revenue", "gross_profit", "operating_income", "ebit", "ebitda", "net_income",
     "interest_expense", "taxes",
     "total_assets", "total_liabilities", "total_equity",
     "current_assets", "current_liabilities",
@@ -317,8 +317,15 @@ def _build_column_rename_map(columns: list[str]) -> dict[str, str]:
         "totalDebt": "total_debt",
         "sgaExpenses": "sga_expenses",
         "sellingGeneralAndAdministrativeExpenses": "sga_expenses",
+        "sga_expense": "sga_expenses",   # alias from older client output
         "rdExpenses": "rd_expenses",
         "researchAndDevelopmentExpenses": "rd_expenses",
+        "research_and_development": "rd_expenses",  # alias from older client output
+        # J-Quants V2 wide-format column names (jp_jquants_wrapper.py)
+        "operating_cashflow": "operating_cash_flow",
+        "investing_cashflow": "investing_cf",
+        "financing_cashflow": "financing_cf",
+        "pretax_income": "ebit",
         "eps": "eps",
         "epsDiluted": "eps_diluted",
         "sharesOutstanding": "shares_outstanding",

@@ -63,6 +63,7 @@ _OPTIONAL_KEYS = (
     "EDGAR_IDENTITY",           # US SEC EDGAR email identity (required by SEC regulation)
     "openfigi_key",             # OpenFIGI (optional, for higher rate limits)
     "FRED_API_KEY",             # US FRED macro data (free registration)
+    "BANXICO_TOKEN",            # Mexico Banxico macro data (free registration)
 )
 
 
@@ -136,6 +137,7 @@ def load_secrets() -> dict[str, str]:
                 "EDGAR_IDENTITY": "US SEC EDGAR identity",
                 "openfigi_key": "OpenFIGI higher rate limits",
                 "FRED_API_KEY": "US FRED macro data",
+                "BANXICO_TOKEN": "Mexico Banxico macro data",
             }.get(key, "specific features")
             logger.info(
                 "Optional key %s not set (needed for %s).",

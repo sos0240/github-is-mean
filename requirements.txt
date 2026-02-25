@@ -42,7 +42,7 @@ matplotlib>=3.6
 # plotly>=5.13
 
 # Phase 1: Unofficial wrappers for core markets
-edgartools>=5.15            # US SEC EDGAR (primary) -- v5.15+ required: cash_flow()->cashflow_statement() rename
+edgartools>=3.0             # US SEC EDGAR (primary) -- code handles both old cash_flow() and new cashflow_statement() APIs
 sec-edgar-api>=1.0         # US SEC EDGAR (fallback)
 jquants-api-client>=2.0.0  # Japan J-Quants (primary) -- replaces edinet-tools. Free plan via email registration at jpx-jquants.com
 dart-fss>=0.4              # South Korea DART (primary)
