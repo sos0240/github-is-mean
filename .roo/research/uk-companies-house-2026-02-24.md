@@ -1,6 +1,7 @@
 # Research Log: UK Companies House
 **Generated**: 2026-02-24T14:37:00Z
-**Status**: Complete
+**Status**: SUPPLEMENTED -- Financial data gap filled by ixbrl-parse (see uk-ixbrl-parse-2026-02-25.md)
+**Supplement**: `.roo/research/uk-ixbrl-parse-2026-02-25.md`
 
 ---
 

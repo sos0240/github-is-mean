@@ -153,21 +153,21 @@ MARKETS: dict[str, MarketInfo] = {
     ),
 
     # --- Asia ---
-    "jp_edinet": MarketInfo(
-        market_id="jp_edinet",
+    "jp_jquants": MarketInfo(
+        market_id="jp_jquants",
         country="Japan",
         country_code="JP",
         region="Asia",
         exchange="Tokyo Stock Exchange (JPX)",
         market_cap="$6.5T",
-        pit_api_name="EDINET",
-        pit_api_url="https://api.edinet-fsa.go.jp/api/v2",
-        requires_api_key=False,
+        pit_api_name="J-Quants",
+        pit_api_url="https://jpx-jquants.com/",
+        requires_api_key=True,
         tier=1,
         phase=1,
-        client_module="operator1.clients.jp_edinet_wrapper",
-        personal_data_level="medium",
-        input_requirements="Name, affiliation, phone number (Japanese-compatible may be needed), email",
+        client_module="operator1.clients.jp_jquants_wrapper",
+        personal_data_level="low",
+        input_requirements="Email registration only at jpx-jquants.com (free plan)",
     ),
     "kr_dart": MarketInfo(
         market_id="kr_dart",

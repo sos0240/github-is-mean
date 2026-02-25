@@ -6,7 +6,7 @@ Point-in-Time (PIT) data providers -- region-based selection
   - ``us_edgar``         -- US (SEC EDGAR via edgartools + sec-edgar-api)
   - ``eu_esef_wrapper``  -- EU (ESEF/XBRL via pyesef)
   - ``uk_ch_wrapper``    -- UK (Companies House wrapper with caching)
-  - ``jp_edinet_wrapper``-- Japan (EDINET via edinet-tools)
+  - ``jp_jquants_wrapper``-- Japan (J-Quants via jquants-api-client)
   - ``kr_dart_wrapper``  -- South Korea (DART via dart-fss)
   - ``tw_mops_wrapper``  -- Taiwan (MOPS scraper wrapper)
   - ``br_cvm_wrapper``   -- Brazil (CVM via pycvm)

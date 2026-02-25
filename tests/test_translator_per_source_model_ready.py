@@ -200,7 +200,7 @@ class TestEUEsefTranslation(unittest.TestCase):
 class TestJapanEdinetTranslation(unittest.TestCase):
     """Full translation pipeline for Japan EDINET data."""
 
-    MARKET = "jp_edinet"
+    MARKET = "jp_jquants"
 
     def _raw_full(self):
         return _build_raw_df(

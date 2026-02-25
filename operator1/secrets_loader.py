@@ -58,7 +58,11 @@ _OPTIONAL_KEYS = (
     "GEMINI_API_KEY",           # Report generation (Gemini AI)
     "ANTHROPIC_API_KEY",        # Report generation (Claude AI -- alternative to Gemini)
     "COMPANIES_HOUSE_API_KEY",  # UK Companies House (free registration)
+    "JQUANTS_API_KEY",          # Japan J-Quants (free email registration at jpx-jquants.com)
     "DART_API_KEY",             # South Korea DART (free registration)
+    "EDGAR_IDENTITY",           # US SEC EDGAR email identity (required by SEC regulation)
+    "openfigi_key",             # OpenFIGI (optional, for higher rate limits)
+    "FRED_API_KEY",             # US FRED macro data (free registration)
 )
 
 
@@ -114,9 +118,10 @@ def load_secrets() -> dict[str, str]:
         raise SystemExit(
             f"Missing required API keys: {', '.join(missing)}\n"
             f"Create a .env file from .env.example.\n"
-            f"Note: All PIT data sources (SEC EDGAR, ESEF, EDINET, CVM, etc.) "
+            f"Note: Most PIT data sources (SEC EDGAR, ESEF, CVM, etc.) "
             f"are free and do not require API keys.\n"
-            f"GEMINI_API_KEY is optional (used for report generation only)."
+            f"J-Quants (Japan), DART (Korea), and Companies House (UK) "
+            f"require free registration for API keys."
         )
 
     # Log optional keys
@@ -126,7 +131,11 @@ def load_secrets() -> dict[str, str]:
                 "GEMINI_API_KEY": "report generation (Gemini)",
                 "ANTHROPIC_API_KEY": "report generation (Claude)",
                 "COMPANIES_HOUSE_API_KEY": "UK market",
+                "JQUANTS_API_KEY": "Japan market (J-Quants)",
                 "DART_API_KEY": "South Korea market",
+                "EDGAR_IDENTITY": "US SEC EDGAR identity",
+                "openfigi_key": "OpenFIGI higher rate limits",
+                "FRED_API_KEY": "US FRED macro data",
             }.get(key, "specific features")
             logger.info(
                 "Optional key %s not set (needed for %s).",
