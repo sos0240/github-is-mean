@@ -112,10 +112,18 @@ class USEdgarClient:
 
     def __init__(
         self,
-        user_agent: str = _DEFAULT_USER_AGENT,
+        user_agent: str = "",
         cache_dir: Path | str = _CACHE_DIR,
     ) -> None:
-        self._user_agent = user_agent
+        # Prefer EDGAR_IDENTITY env var (email), fall back to provided arg or default
+        self._user_agent = (
+            user_agent
+            or os.environ.get("EDGAR_IDENTITY", "")
+            or _DEFAULT_USER_AGENT
+        )
+        # SEC requires email in User-Agent; if EDGAR_IDENTITY is just an email, wrap it
+        if "@" in self._user_agent and "/" not in self._user_agent:
+            self._user_agent = f"Operator1/1.0 ({self._user_agent})"
         self._cache_dir = Path(cache_dir)
         self._edgar_initialized = False
         self._sec_api_client = None
