@@ -78,11 +78,14 @@ def fetch_ohlcv_yfinance(
     yf_ticker = f"{ticker}{suffix}" if suffix and not ticker.endswith(suffix) else ticker
 
     try:
+        # yfinance handles rate limiting and retries internally via sessions.
+        # Set timeout to 60s to handle slow connections gracefully.
         df = yf.download(
             yf_ticker,
             period=f"{years}y",
             auto_adjust=False,
             progress=False,
+            timeout=60,
         )
 
         if df is None or df.empty:
