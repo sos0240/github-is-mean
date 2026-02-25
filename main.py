@@ -762,8 +762,12 @@ Non-interactive examples:
                 continue
 
             stmt_indexed = stmt_df.set_index(date_col)[numeric_cols]
-            # Reindex to cache dates and forward-fill
-            stmt_aligned = stmt_indexed.reindex(cache.index, method="ffill")
+            # Forward-fill financial data onto the daily cache (as-of join).
+            # The quarterly filing dates don't exist in the daily index,
+            # so we union the indices first, then ffill, then select daily dates.
+            combined_idx = cache.index.union(stmt_indexed.index).sort_values()
+            stmt_aligned = stmt_indexed.reindex(combined_idx).ffill()
+            stmt_aligned = stmt_aligned.reindex(cache.index)
 
             # Skip columns already in cache (first statement wins)
             new_cols = [c for c in stmt_aligned.columns if c not in _merged_cols]
