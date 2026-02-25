@@ -484,8 +484,8 @@ def _build_estimation_columns(
     conf[still_missing & estimated.notna()] = confidence[still_missing & estimated.notna()]
     conf[still_missing & estimated.isna()] = 0.0
 
-    # Use pd.concat to add all columns at once, avoiding DataFrame
-    # fragmentation warnings when this function is called many times.
+    # Bulk-assign all new columns at once to avoid DataFrame fragmentation
+    # warnings (PerformanceWarning) when this function is called many times.
     new_cols = pd.DataFrame({
         f"{var}_observed": observed,
         f"{var}_estimated": estimated,
@@ -493,8 +493,7 @@ def _build_estimation_columns(
         f"{var}_source": source,
         f"{var}_confidence": conf,
     }, index=df.index)
-    for col in new_cols.columns:
-        df[col] = new_cols[col]
+    df[new_cols.columns] = new_cols
 
 
 # ---------------------------------------------------------------------------

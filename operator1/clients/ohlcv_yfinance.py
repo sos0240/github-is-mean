@@ -39,6 +39,10 @@ _MARKET_SUFFIX: dict[str, str] = {
     "ch_six": ".SW",
     "sa_tadawul": ".SR",
     "ae_dfm": ".AE",
+    "nl_esef": ".AS",   # Euronext Amsterdam
+    "es_esef": ".MC",   # BME Madrid
+    "it_esef": ".MI",   # Borsa Italiana Milan
+    "se_esef": ".ST",   # Nasdaq Stockholm
 }
 
 
@@ -91,6 +95,11 @@ def fetch_ohlcv_yfinance(
         if df is None or df.empty:
             logger.debug("yfinance returned empty for %s", yf_ticker)
             return pd.DataFrame()
+
+        # yfinance >= 1.2.0 returns MultiIndex columns like ('Open', 'AAPL')
+        # for single-ticker downloads. Flatten to simple column names.
+        if hasattr(df.columns, 'nlevels') and df.columns.nlevels > 1:
+            df.columns = df.columns.get_level_values(0)
 
         # Normalize columns to lowercase
         df = df.reset_index()
