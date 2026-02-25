@@ -38,6 +38,10 @@ dtaidistance>=2.3      # Dynamic Time Warping for historical analogs (G1)
 # Report generation (Phase 7, used in report_generator.py)
 matplotlib>=3.6
 
+# News sentiment (Step 5e, used in news_sentiment.py)
+gnews>=0.4.0               # Google News scraper (no API key) -- primary news source
+feedparser>=6.0            # RSS feed parser (Google News RSS fallback, no key)
+
 # Not yet used:
 # plotly>=5.13
 
