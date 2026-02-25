@@ -46,6 +46,7 @@ edgartools>=3.0             # US SEC EDGAR (primary) -- code handles both old ca
 sec-edgar-api>=1.0         # US SEC EDGAR (fallback)
 jquants-api-client>=2.0.0  # Japan J-Quants (primary) -- replaces edinet-tools. Free plan via email registration at jpx-jquants.com
 dart-fss>=0.4              # South Korea DART (primary)
+ixbrl-parse>=0.10.0           # UK iXBRL document parser for Companies House financial data
 # pyesef -- REMOVED: library archived 2026-01-03 (graceful degradation in eu_esef_wrapper.py)
 # pycvm -- optional: file-based API, br_cvm_wrapper.py uses direct HTTP as primary path
 pycvm>=0.4                 # Brazil CVM data (optional, used for local file parsing)
