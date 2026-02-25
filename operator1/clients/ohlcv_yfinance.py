@@ -96,6 +96,11 @@ def fetch_ohlcv_yfinance(
             logger.debug("yfinance returned empty for %s", yf_ticker)
             return pd.DataFrame()
 
+        # yfinance >= 1.2.0 returns MultiIndex columns like ('Open', 'AAPL')
+        # for single-ticker downloads. Flatten to simple column names.
+        if hasattr(df.columns, 'nlevels') and df.columns.nlevels > 1:
+            df.columns = df.columns.get_level_values(0)
+
         # Normalize columns to lowercase
         df = df.reset_index()
         df.columns = [c.lower() if isinstance(c, str) else str(c).lower() for c in df.columns]

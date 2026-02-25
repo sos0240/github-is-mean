@@ -1,98 +1,77 @@
-"""UK macro provider using ONS (Office for National Statistics) API.
+"""UK macro provider using FRED (UK series via OECD) + wbgapi fallback.
 
 Primary macro source for the UK market.
 Fallback: wbgapi (World Bank).
 
-No API key required. ONS open data.
-API docs: https://developer.ons.gov.uk/
+NOTE: The original ONS time series API (api.ons.gov.uk) was decommissioned
+on 25/11/2024. We use FRED instead, which hosts comprehensive UK data
+via OECD and Bank of England feeds.
+
+Requires FRED_API_KEY (free registration).
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date, timedelta
 
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# ONS time series IDs for canonical macro variables
-# These are the 4-character CDID codes used by the ONS time series API.
-_ONS_SERIES: dict[str, str] = {
-    "gdp_growth": "IHYQ",         # GDP quarter on quarter growth rate
-    "inflation_rate_yoy": "D7G7",  # CPI annual rate (all items)
-    "unemployment_rate": "MGSX",   # Unemployment rate (aged 16+)
-    "interest_rate": "IUMABEDR",   # Bank of England base rate
-    "exchange_rate": "XUMAUSS",    # USD/GBP spot exchange rate
+# FRED series IDs for UK macro indicators (sourced from OECD/BoE feeds)
+_FRED_GB_SERIES: dict[str, str] = {
+    "gdp_growth": "CLVMNACSCAB1GQUK",       # UK Real GDP (quarterly)
+    "inflation_rate_yoy": "FPCPITOTLZGGBR",  # UK CPI inflation (WB via FRED)
+    "unemployment_rate": "LRUNTTTTGBM156S",   # UK unemployment rate (OECD)
+    "interest_rate": "IRSTCI01GBM156N",       # UK short-term interest rate
+    "exchange_rate": "DEXUSUK",               # USD/GBP exchange rate
 }
-
-_ONS_BASE = "https://api.ons.gov.uk/timeseries"
 
 
 def fetch_macro_ons(
     years: int = 10,
 ) -> dict[str, pd.Series]:
-    """Fetch UK macro indicators from ONS.
+    """Fetch UK macro indicators via FRED (UK/OECD series).
 
-    Uses the ONS time series API (free, no key required).
+    The ONS API was decommissioned Nov 2024. FRED hosts comprehensive
+    UK macro data via OECD and Bank of England data feeds.
 
     Returns
     -------
     Dict mapping canonical indicator name -> pd.Series with DatetimeIndex.
     """
-    import requests
-
     results: dict[str, pd.Series] = {}
 
-    for canonical_name, cdid in _ONS_SERIES.items():
+    fred_key = os.environ.get("FRED_API_KEY", "")
+    if not fred_key:
+        logger.debug("FRED_API_KEY not set; UK macro falling back to wbgapi")
+        return {}
+
+    try:
+        from fredapi import Fred
+    except ImportError:
+        logger.debug("fredapi not installed for UK macro")
+        return {}
+
+    try:
+        fred = Fred(api_key=fred_key)
+    except Exception as exc:
+        logger.warning("fredapi init failed for UK macro: %s", exc)
+        return {}
+
+    start = date.today() - timedelta(days=365 * years)
+
+    for canonical_name, series_id in _FRED_GB_SERIES.items():
         try:
-            url = f"{_ONS_BASE}/{cdid}/dataset/months/data"
-            resp = requests.get(url, timeout=30, headers={"Accept": "application/json"})
-
-            if resp.status_code != 200:
-                # Try quarters endpoint for GDP
-                if canonical_name == "gdp_growth":
-                    url = f"{_ONS_BASE}/{cdid}/dataset/quarters/data"
-                    resp = requests.get(url, timeout=30, headers={"Accept": "application/json"})
-
-            if resp.status_code != 200:
-                logger.debug("ONS %s returned %d", cdid, resp.status_code)
-                continue
-
-            data = resp.json()
-
-            # ONS returns {"months": [{"date": "...", "value": "...", ...}, ...]}
-            # or {"quarters": [...]}
-            observations = data.get("months") or data.get("quarters") or data.get("years") or []
-
-            if not observations:
-                continue
-
-            cutoff = date.today() - timedelta(days=365 * years)
-            dates = []
-            values = []
-            for obs in observations:
-                obs_date = obs.get("date", "")
-                obs_val = obs.get("value", "")
-                if not obs_date or not obs_val:
-                    continue
-                try:
-                    dt = pd.to_datetime(obs_date)
-                    if dt.date() < cutoff:
-                        continue
-                    dates.append(dt)
-                    values.append(float(obs_val))
-                except (ValueError, TypeError):
-                    continue
-
-            if dates and values:
-                series = pd.Series(values, index=dates).sort_index()
+            series = fred.get_series(series_id, observation_start=start)
+            if series is not None and not series.empty:
                 series.name = canonical_name
                 results[canonical_name] = series
-                logger.debug("ONS %s (%s): %d observations", canonical_name, cdid, len(series))
-
+                logger.debug("FRED-GB %s: %d obs", series_id, len(series))
         except Exception as exc:
-            logger.debug("ONS failed for %s: %s", canonical_name, exc)
+            logger.debug("FRED-GB failed for %s: %s", series_id, exc)
 
-    logger.info("ONS fetched %d/%d indicators", len(results), len(_ONS_SERIES))
+    logger.info("UK macro via FRED: %d/%d indicators", len(results), len(_FRED_GB_SERIES))
     return results
