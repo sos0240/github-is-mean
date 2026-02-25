@@ -901,7 +901,12 @@ class USEdgarClient:
             facts = client.get_company_facts(cik)
         except Exception as exc:
             logger.error("Fallback companyfacts failed for %s: %s", identifier, exc)
-            return pd.DataFrame()
+            # Third fallback: direct requests to companyfacts endpoint
+            try:
+                facts = self._fetch_companyfacts_direct(identifier)
+            except Exception as exc2:
+                logger.error("Direct companyfacts also failed for %s: %s", identifier, exc2)
+                return pd.DataFrame()
 
         concept_map = {
             "income": _USGAAP_INCOME_CONCEPTS,
@@ -987,3 +992,45 @@ class USEdgarClient:
                     if isinstance(v, pd.Timestamp):
                         r[k] = v.isoformat()
             self._write_cache(identifier, filename, {"period_end": period_str, "rows": records})
+
+    def _fetch_companyfacts_direct(self, identifier: str) -> dict:
+        """Fetch companyfacts JSON using direct requests (no library needed).
+
+        This is the last-resort fallback when neither edgartools nor
+        sec-editor-api is available. Uses the SEC EDGAR XBRL API directly.
+
+        Endpoint: https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json
+        """
+        import requests
+
+        headers = {"User-Agent": self._user_agent, "Accept": "application/json"}
+
+        # Resolve ticker to CIK using the tickers JSON
+        resp = requests.get(
+            "https://www.sec.gov/files/company_tickers.json",
+            headers=headers,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        tickers_data = resp.json()
+
+        cik = ""
+        ticker_upper = identifier.upper()
+        for entry in tickers_data.values():
+            if str(entry.get("ticker", "")).upper() == ticker_upper:
+                cik = str(entry["cik_str"]).zfill(10)
+                break
+            if str(entry.get("cik_str", "")) == identifier:
+                cik = str(entry["cik_str"]).zfill(10)
+                break
+
+        if not cik:
+            raise USEdgarError("companyfacts", f"CIK not found for: {identifier}")
+
+        # Fetch companyfacts
+        facts_url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+        resp = requests.get(facts_url, headers=headers, timeout=30)
+        resp.raise_for_status()
+
+        logger.info("Direct companyfacts fetched for %s (CIK %s)", identifier, cik)
+        return resp.json()
