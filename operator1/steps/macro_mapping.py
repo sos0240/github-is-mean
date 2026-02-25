@@ -188,7 +188,10 @@ def fetch_macro_data(
     missing: list[str] = []
 
     for raw_name, canonical_name in _MACRO_TO_CANONICAL.items():
+        # Try raw name first, then canonical name (providers may use either)
         series = macro_raw.get(raw_name) if macro_raw else None
+        if series is None and macro_raw:
+            series = macro_raw.get(canonical_name)
         if series is not None and not series.empty:
             yearly_df = _series_to_yearly_df(series)
             if not yearly_df.empty:
