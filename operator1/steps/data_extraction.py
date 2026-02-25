@@ -264,25 +264,10 @@ def extract_all_data(
             "PIT source has no OHLCV for %s; trying supplement provider ...",
             target.isin,
         )
-        try:
-            from operator1.clients.ohlcv_provider import fetch_ohlcv
-            from operator1.secrets_loader import load_secrets
-            secrets = load_secrets()
-            av_key = secrets.get("ALPHA_VANTAGE_API_KEY", "")
-            ohlcv_df = fetch_ohlcv(
-                ticker=ticker,
-                market_id=market_id,
-                api_key=av_key,
-            )
-            if not ohlcv_df.empty:
-                result.target.ohlcv = ohlcv_df
-                result.target.quotes = ohlcv_df
-                logger.info(
-                    "OHLCV supplement: %d rows for %s via ohlcv_provider",
-                    len(ohlcv_df), ticker,
-                )
-        except Exception as exc:
-            logger.warning("OHLCV supplement failed for %s: %s", target.isin, exc)
+        logger.info(
+            "No OHLCV supplement available for %s (Alpha Vantage removed).",
+            target.isin,
+        )
 
     if result.target.ohlcv.empty:
         result.errors.append({

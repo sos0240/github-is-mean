@@ -112,9 +112,7 @@ _HOST_RATE_LIMITS: dict[str, float] = {
     "www.twse.com.tw": 1.0,
     "dados.cvm.gov.br": 2.0,
     "www.cmfchile.cl": 1.0,
-    "www.alphavantage.co": 0.5,       # Alpha Vantage free: 25/day = very slow
-    "api.stlouisfed.org": 2.0,        # FRED: 120/min
-    "sdw-wsrest.ecb.europa.eu": 2.0,
+
     "api.openfigi.com": 0.4,          # OpenFIGI: 25/min without key
 }
 

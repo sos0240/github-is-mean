@@ -193,19 +193,19 @@ main.py                     # CLI entry point (8-step pipeline)
 run.py                      # Interactive terminal launcher
 operator1/
   clients/
-    pit_registry.py         # Market + Macro API registry (10 markets, 10 macro APIs)
+    pit_registry.py         # Market registry (10 markets)
     pit_base.py             # PITClient protocol (filing_date + report_date)
-    sec_edgar.py            # SEC EDGAR client (US)
-    esef.py                 # ESEF/XBRL client (EU/FR/DE)
-    companies_house.py      # Companies House client (UK)
-    edinet.py               # EDINET client (Japan)
-    dart.py                 # DART client (South Korea)
-    mops.py                 # MOPS client (Taiwan)
-    cvm.py                  # CVM client (Brazil)
-    cmf.py                  # CMF client (Chile)
-    macro_client.py         # Unified macro data fetcher (10 central bank APIs)
+    us_edgar.py             # US SEC EDGAR (via edgartools + sec-edgar-api)
+    eu_esef_wrapper.py      # EU ESEF/XBRL (via pyesef)
+    uk_ch_wrapper.py        # UK Companies House wrapper
+    jp_edinet_wrapper.py    # Japan EDINET (via edinet-tools)
+    kr_dart_wrapper.py      # South Korea DART (via dart-fss)
+    tw_mops_wrapper.py      # Taiwan MOPS scraper wrapper
+    br_cvm_wrapper.py       # Brazil CVM (via pycvm)
+    cl_cmf_wrapper.py       # Chile CMF wrapper
     canonical_translator.py # Normalizes all filing formats into one schema
     gemini.py               # Gemini AI (report generation only)
+    claude.py               # Anthropic Claude (alternative LLM)
   estimation/
     estimator.py            # Two-pass missing data inference (accounting + ML)
     vae_imputer.py          # Variational Autoencoder imputation option
@@ -265,12 +265,12 @@ config/
 
 | Key | Purpose | Required? | Where to get it |
 |-----|---------|-----------|-----------------|
-| `GEMINI_API_KEY` | AI report generation | Optional | [ai.google.dev](https://ai.google.dev/) |
-| `FRED_API_KEY` | US macro data (FRED) | Optional | [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html) |
+| `GEMINI_API_KEY` | AI report generation (Gemini) | Optional | [ai.google.dev](https://ai.google.dev/) |
+| `ANTHROPIC_API_KEY` | AI report generation (Claude) | Optional | [console.anthropic.com](https://console.anthropic.com/) |
 | `COMPANIES_HOUSE_API_KEY` | UK market data | Optional | [developer.company-information.service.gov.uk](https://developer.company-information.service.gov.uk/) |
 | `DART_API_KEY` | South Korea market data | Optional | [opendart.fss.or.kr](https://opendart.fss.or.kr/) |
 
-Without any keys, the pipeline works for most markets (SEC EDGAR, ESEF, EDINET, BCB, etc.).
+Without any keys, the pipeline works for most markets using free community wrapper libraries.
 
 ---
 

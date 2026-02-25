@@ -447,12 +447,11 @@ class USEdgarClient:
     def get_quotes(self, identifier: str) -> pd.DataFrame:
         """SEC EDGAR does not provide OHLCV price data.
 
-        OHLCV is handled by ohlcv_provider.py (Alpha Vantage).
+        SEC EDGAR does not provide OHLCV data.
         Returns an empty DataFrame.
         """
         logger.debug(
-            "SEC EDGAR does not provide OHLCV data. "
-            "Price data for %s is sourced from ohlcv_provider.",
+            "SEC EDGAR does not provide OHLCV data for %s.",
             identifier,
         )
         return pd.DataFrame()

@@ -59,12 +59,6 @@ _OPTIONAL_KEYS = (
     "ANTHROPIC_API_KEY",        # Report generation (Claude AI -- alternative to Gemini)
     "COMPANIES_HOUSE_API_KEY",  # UK Companies House (free registration)
     "DART_API_KEY",             # South Korea DART (free registration)
-    "FRED_API_KEY",             # US FRED macro data (free registration)
-    "ESTAT_API_KEY",            # Japan e-Stat macro data (free registration)
-    "KOSIS_API_KEY",            # South Korea KOSIS macro data (free registration)
-    "INSEE_API_KEY",            # France INSEE macro data (free registration)
-    "BCCH_API_KEY",             # Chile BCCh macro data (free registration)
-    "ALPHA_VANTAGE_API_KEY",    # OHLCV price data (free registration)
 )
 
 
@@ -133,12 +127,6 @@ def load_secrets() -> dict[str, str]:
                 "ANTHROPIC_API_KEY": "report generation (Claude)",
                 "COMPANIES_HOUSE_API_KEY": "UK market",
                 "DART_API_KEY": "South Korea market",
-                "FRED_API_KEY": "US macro data",
-                "ESTAT_API_KEY": "Japan macro data",
-                "KOSIS_API_KEY": "Korea macro data",
-                "INSEE_API_KEY": "France macro data",
-                "BCCH_API_KEY": "Chile macro data",
-                "ALPHA_VANTAGE_API_KEY": "OHLCV price data",
             }.get(key, "specific features")
             logger.info(
                 "Optional key %s not set (needed for %s).",

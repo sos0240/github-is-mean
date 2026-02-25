@@ -96,9 +96,8 @@ def fetch_macro_data(
 
     This function supports two modes:
 
-    1. **Pre-fetched** -- pass ``macro_raw`` (output of
-       ``macro_client.fetch_macro_indicators()``) to convert it into
-       a ``MacroDataset`` without re-fetching.
+    1. **Pre-fetched** -- pass ``macro_raw`` (dict of indicator Series)
+       to convert it into a ``MacroDataset`` without re-fetching.
     2. **Auto-fetch** -- pass ``market_id`` (or ``macro_api_info``) to
        have this function resolve the macro API and fetch the data.
 
@@ -113,7 +112,7 @@ def fetch_macro_data(
         A ``MacroAPIInfo`` instance from the registry.  Takes priority
         over ``market_id`` lookup.
     macro_raw:
-        Pre-fetched dict from ``macro_client.fetch_macro_indicators()``.
+        Pre-fetched dict of indicator name -> pd.Series.
         When provided, no HTTP calls are made.
     secrets:
         API key dictionary (for macro sources that require registration).
@@ -151,32 +150,13 @@ def fetch_macro_data(
     # Fetch indicators if not pre-fetched
     # ------------------------------------------------------------------
     if macro_raw is None:
-        try:
-            from operator1.clients.macro_client import fetch_macro_indicators
-
-            _macro_key_map = {
-                "us_fred": "FRED_API_KEY",
-                "jp_estat": "ESTAT_API_KEY",
-                "kr_kosis": "KOSIS_API_KEY",
-                "fr_insee": "INSEE_API_KEY",
-                "cl_bcch": "BCCH_API_KEY",
-            }
-            api_key = secrets.get(
-                _macro_key_map.get(macro_api_info.macro_id, ""), ""
-            )
-
-            logger.info(
-                "Fetching macro data from %s (%s)...",
-                macro_api_info.api_name,
-                macro_api_info.country,
-            )
-            macro_raw = fetch_macro_indicators(macro_api_info, api_key=api_key)
-        except Exception as exc:
-            logger.warning("Macro data fetch failed: %s", exc)
-            return MacroDataset(
-                country_iso3=country_iso2,
-                missing=list(_MACRO_TO_CANONICAL.values()),
-            )
+        logger.info(
+            "Macro data fetching skipped (government macro APIs removed)."
+        )
+        return MacroDataset(
+            country_iso3=country_iso2,
+            missing=list(_MACRO_TO_CANONICAL.values()),
+        )
 
     # ------------------------------------------------------------------
     # Convert raw series -> yearly DataFrames for downstream consumers

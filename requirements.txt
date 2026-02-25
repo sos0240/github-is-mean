@@ -59,11 +59,10 @@ pycvm>=0.4                 # Brazil CVM data (optional, used for local file pars
 # spacy>=3.5               # Local NER for personal data detection (12MB model: en_core_web_sm)
 # After installing: python -m spacy download en_core_web_sm
 
-# Phase 3: Macro data libraries
-fredapi>=0.5               # US FRED (replaces manual HTTP calls)
-wbgapi>=1.0                # World Bank global fallback (200+ countries)
-sdmx1>=2.0                 # SDMX: ECB, OECD, Eurostat, INSEE (successor to pandasdmx, pydantic v2 compatible)
-# imf-reader>=1.4           # IMF global macro fallback (190+ countries) -- research: .roo/research/macro-imf-reader-2026-02-24.md
+# Phase 3: Macro data libraries (removed -- government macro APIs deleted)
+# fredapi>=0.5             # US FRED (removed)
+# wbgapi>=1.0              # World Bank (removed)
+# sdmx1>=2.0               # SDMX: ECB, OECD, Eurostat, INSEE (removed)
 
 # Testing
 pytest>=7.0

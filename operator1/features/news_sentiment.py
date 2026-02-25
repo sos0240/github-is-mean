@@ -109,73 +109,12 @@ def _sentiment_label(score: float) -> str:
 
 
 def _fetch_news_alpha_vantage(symbol: str) -> pd.DataFrame:
-    """Fetch stock news from Alpha Vantage NEWS_SENTIMENT endpoint (free).
+    """Alpha Vantage news endpoint -- removed (paid/commercial API).
 
-    Alpha Vantage provides a news/sentiment endpoint that returns recent
-    news articles with titles, summaries, and dates.  Free tier: 25 req/day
-    (shared with OHLCV).  No separate API key needed -- uses the same
-    ALPHA_VANTAGE_API_KEY from secrets.
-
-    Returns a DataFrame with at minimum ``title`` and ``publishedDate``
-    columns, or an empty DataFrame on failure.
+    Returns an empty DataFrame. Previously used Alpha Vantage
+    NEWS_SENTIMENT endpoint.
     """
-    import os
-
-    api_key = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
-    if not api_key:
-        logger.debug("No ALPHA_VANTAGE_API_KEY -- cannot fetch news")
-        return pd.DataFrame()
-
-    try:
-        # Check shared Alpha Vantage daily rate limit (25 req/day free tier)
-        # Research: .roo/research/ohlcv-alpha-vantage-2026-02-24.md Section 3b
-        from operator1.clients.ohlcv_provider import _check_av_daily_limit, _increment_av_counter
-        if not _check_av_daily_limit():
-            logger.debug("Alpha Vantage daily limit reached -- skipping news fetch")
-            return pd.DataFrame()
-
-        from operator1.http_utils import cached_get
-        data = cached_get(
-            "https://www.alphavantage.co/query",
-            params={
-                "function": "NEWS_SENTIMENT",
-                "tickers": symbol,
-                "limit": 200,
-                "apikey": api_key,
-            },
-        )
-        _increment_av_counter()  # Decrement shared daily limit
-        if not isinstance(data, dict):
-            return pd.DataFrame()
-
-        # Check for errors
-        if "Error Message" in data or "Note" in data:
-            logger.debug("Alpha Vantage news error: %s", data.get("Error Message", data.get("Note", "")))
-            return pd.DataFrame()
-
-        feed = data.get("feed", [])
-        if not feed:
-            return pd.DataFrame()
-
-        rows = []
-        for item in feed:
-            title = item.get("title", "")
-            pub_date = item.get("time_published", "")
-            summary = item.get("summary", "")
-            if title:
-                rows.append({
-                    "title": title,
-                    "publishedDate": pub_date[:10] if len(pub_date) >= 10 else pub_date,
-                    "summary": summary,
-                })
-
-        if rows:
-            df = pd.DataFrame(rows)
-            logger.info("Alpha Vantage news: %d articles for %s", len(df), symbol)
-            return df
-    except Exception as exc:
-        logger.debug("Alpha Vantage news fetch failed: %s", exc)
-
+    logger.debug("Alpha Vantage news removed -- returning empty DataFrame")
     return pd.DataFrame()
 
 

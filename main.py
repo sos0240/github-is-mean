@@ -680,28 +680,9 @@ Non-interactive examples:
     # a given date is an immutable fact that never changes retroactively.
     if quotes_df.empty and ticker:
         logger.info(
-            "PIT source %s does not provide OHLCV -- fetching from free-tier source...",
+            "PIT source %s does not provide OHLCV -- price features will be limited.",
             market_info.pit_api_name,
         )
-        try:
-            from operator1.clients.ohlcv_provider import fetch_ohlcv
-            _av_key = secrets.get("ALPHA_VANTAGE_API_KEY", "")
-            quotes_df = fetch_ohlcv(
-                ticker=ticker,
-                market_id=market_id,
-                api_key=_av_key,
-                years=args.years,
-            )
-            if not quotes_df.empty:
-                logger.info("OHLCV fetched: %d days for %s", len(quotes_df), ticker)
-            else:
-                logger.info(
-                    "No OHLCV available for %s. Price features will be limited. "
-                    "Set ALPHA_VANTAGE_API_KEY for free OHLCV data.",
-                    ticker,
-                )
-        except Exception as exc:
-            logger.warning("OHLCV fetch failed: %s", exc)
 
     # Step 3b: Reconcile financial data (normalize fields, validate dates)
     reconciliation_report = {}
@@ -838,97 +819,15 @@ Non-interactive examples:
     # ------------------------------------------------------------------
     # Step 4a: Fetch macro data for survival mode analysis
     # ------------------------------------------------------------------
-    macro_data = {}          # raw dict[str, pd.Series] from macro_client
+    macro_data = {}          # raw dict[str, pd.Series] (macro APIs removed)
     macro_dataset = None     # MacroDataset for downstream modules
     macro_quadrant_result = None
 
     if macro_api_info:
         logger.info("")
         logger.info(
-            "Step 4a: Fetching macro data from %s...",
-            macro_api_info.api_name,
+            "Step 4a: Macro data fetching skipped (government macro APIs removed).",
         )
-        try:
-            from operator1.clients.macro_client import fetch_macro_indicators
-
-            # Map macro API to the correct API key from secrets
-            _macro_key_map = {
-                "us_fred": "FRED_API_KEY",
-                "jp_estat": "ESTAT_API_KEY",
-                "kr_kosis": "KOSIS_API_KEY",
-                "fr_insee": "INSEE_API_KEY",
-                "cl_bcch": "BCCH_API_KEY",
-            }
-            _macro_api_key = secrets.get(
-                _macro_key_map.get(macro_api_info.macro_id, ""), ""
-            )
-            if macro_api_info.requires_api_key and not _macro_api_key:
-                logger.info(
-                    "  %s requires an API key (%s) -- some data may be limited",
-                    macro_api_info.api_name,
-                    _macro_key_map.get(macro_api_info.macro_id, "unknown"),
-                )
-
-            macro_data = fetch_macro_indicators(macro_api_info, api_key=_macro_api_key)
-            n_indicators = sum(1 for v in macro_data.values() if v is not None)
-            logger.info(
-                "Macro data fetched: %d/%d indicators from %s",
-                n_indicators,
-                len(macro_data),
-                macro_api_info.api_name,
-            )
-        except Exception as exc:
-            logger.warning("Macro data fetch failed (continuing without): %s", exc)
-
-        # Build a MacroDataset so downstream modules (macro_alignment,
-        # macro_quadrant, survival_mode) get real data instead of stubs.
-        try:
-            from operator1.steps.macro_mapping import fetch_macro_data
-            macro_dataset = fetch_macro_data(
-                country_iso2=market_info.country_code,
-                market_id=market_id,
-                macro_api_info=macro_api_info,
-                macro_raw=macro_data,
-                secrets=secrets,
-            )
-        except Exception as exc:
-            logger.warning("MacroDataset construction failed: %s", exc)
-
-        # Merge macro indicators into the daily cache
-        if macro_data:
-            try:
-                for indicator_name, indicator_series in macro_data.items():
-                    if indicator_series is not None and not indicator_series.empty:
-                        # Forward-fill macro data onto daily cache
-                        col_name = f"macro_{indicator_name}"
-                        aligned = indicator_series.reindex(cache.index, method="ffill")
-                        cache[col_name] = aligned
-                n_merged = sum(
-                    1 for c in cache.columns if c.startswith("macro_")
-                )
-                logger.info("Merged %d macro indicators into cache", n_merged)
-            except Exception as exc:
-                logger.warning("Macro data merge failed: %s", exc)
-
-        # Compute macro quadrant classification (goldilocks/reflation/
-        # stagflation/deflation) from the real macro data.
-        if macro_dataset is not None and macro_dataset.indicators:
-            try:
-                from operator1.features.macro_quadrant import compute_macro_quadrant
-                cache, macro_quadrant_result = compute_macro_quadrant(
-                    cache, macro_dataset,
-                )
-                if macro_quadrant_result is not None:
-                    logger.info(
-                        "Macro quadrant: %s (growth_trend=%.2f, %d days classified)",
-                        macro_quadrant_result.current_quadrant,
-                        macro_quadrant_result.growth_trend
-                        if not pd.isna(macro_quadrant_result.growth_trend)
-                        else 0.0,
-                        macro_quadrant_result.n_days_classified,
-                    )
-            except Exception as exc:
-                logger.warning("Macro quadrant computation failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Step 4a-validate: Log what both APIs returned for diagnostics
