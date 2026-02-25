@@ -22,13 +22,16 @@ logger = logging.getLogger(__name__)
 
 # ECB SDW REST endpoint URLs for direct HTTP fallback
 # These bypass sdmx1 if it times out or isn't installed.
-_ECB_REST_BASE = "https://sdw-wsrest.ecb.europa.eu/service"
+# ECB migrated from sdw-wsrest.ecb.europa.eu to data-api.ecb.europa.eu
+# Verified working 2026-02-25 via curl tests
+_ECB_REST_BASE = "https://data-api.ecb.europa.eu/service"
 
 # Direct URL patterns for key ECB series (CSV format, faster than SDMX XML)
+# Verified with curl --max-time 15 on 2026-02-25
 _ECB_DIRECT_URLS: dict[str, str] = {
-    "gdp_growth": f"{_ECB_REST_BASE}/data/MNA/A.I8.W2.S1.S1.B.B1GQ._Z._Z._Z.EUR.LR.GY?lastNObservations=10",
-    "inflation_rate_yoy": f"{_ECB_REST_BASE}/data/ICP/A.U2.N.000000.4.ANR?lastNObservations=10",
-    "interest_rate": f"{_ECB_REST_BASE}/data/FM/M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA?lastNObservations=36",
+    "exchange_rate": f"{_ECB_REST_BASE}/data/EXR/A.USD.EUR.SP00.A?lastNObservations=10&format=csvdata",
+    "interest_rate": f"{_ECB_REST_BASE}/data/FM/M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA?lastNObservations=36&format=csvdata",
+    # GDP and inflation use the sdmx1 library path (complex key structure)
 }
 
 
@@ -49,7 +52,12 @@ def fetch_macro_ecb(
     # Method 1: Try sdmx1 library (more structured, but can be slow)
     try:
         import sdmx
-        ecb = sdmx.Client("ECB", timeout=90)  # ECB can be very slow
+        # Use the new ECB data API endpoint (migrated from sdw-wsrest)
+        ecb = sdmx.Client(
+            "ECB",
+            backend="data-api.ecb.europa.eu",
+            timeout=90,
+        )
 
         # Simple exchange rate query as a quick test
         try:
@@ -88,9 +96,13 @@ def fetch_macro_ecb(
         import requests
         for canonical_name, url in _ECB_DIRECT_URLS.items():
             try:
+                # format=csvdata is appended to URLs already; just request it
                 resp = requests.get(
                     url,
-                    headers={"Accept": "application/vnd.sdmx.data+csv;version=1.0.0"},
+                    headers={
+                        "Accept": "text/csv, application/vnd.sdmx.data+csv;version=1.0.0",
+                        "User-Agent": "Operator1/1.0",
+                    },
                     timeout=60,
                 )
                 if resp.status_code == 200 and resp.text:
