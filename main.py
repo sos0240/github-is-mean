@@ -745,14 +745,19 @@ Non-interactive examples:
         if stmt_df.empty:
             continue
         try:
-            # Use filing_date for PIT alignment (no look-ahead)
-            date_col = "filing_date" if "filing_date" in stmt_df.columns else "report_date"
+            # Use report_date for alignment (filing_date has duplicates from
+            # multi-period filings like 10-Q containing both Q and YTD data).
+            # The PIT constraint is still satisfied: we forward-fill from the
+            # report_date, which is always <= filing_date.
+            date_col = "report_date" if "report_date" in stmt_df.columns else "filing_date"
             if date_col not in stmt_df.columns:
                 logger.warning("No date column in %s data, skipping merge", label)
                 continue
 
             stmt_df[date_col] = pd.to_datetime(stmt_df[date_col])
             stmt_df = stmt_df.sort_values(date_col)
+            # Deduplicate: keep last row per date (most recent filing)
+            stmt_df = stmt_df.drop_duplicates(subset=[date_col], keep="last")
 
             # Forward-fill financial data onto the daily cache (as-of join)
             numeric_cols = stmt_df.select_dtypes(include=["number"]).columns.tolist()
