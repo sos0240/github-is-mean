@@ -15,7 +15,7 @@ Translation responsibilities:
 
 Usage:
     from operator1.clients.canonical_translator import translate_financials
-    canonical_df = translate_financials(raw_df, market_id="jp_edinet")
+    canonical_df = translate_financials(raw_df, market_id="jp_jquants")
 """
 
 from __future__ import annotations
@@ -412,7 +412,7 @@ MARKET_ACCOUNTING_STANDARD: dict[str, str] = {
     "eu_esef": "IFRS",
     "fr_esef": "IFRS",
     "de_esef": "IFRS",
-    "jp_edinet": "JPPFS (Japan GAAP) / IFRS",
+    "jp_jquants": "JPPFS (Japan GAAP) / IFRS",
     "kr_dart": "K-IFRS",
     "tw_mops": "TIFRS (Taiwan IFRS)",
     "br_cvm": "BR-GAAP / IFRS",
@@ -442,7 +442,7 @@ _MARKET_CONCEPT_MAPS: dict[str, dict[str, str]] = {
     "eu_esef": _IFRS_MAP,
     "fr_esef": _IFRS_MAP,
     "de_esef": _IFRS_MAP,
-    "jp_edinet": {**_JPPFS_MAP, **_IFRS_MAP},    # Japan: JPPFS + IFRS adopters
+    "jp_jquants": {**_JPPFS_MAP, **_IFRS_MAP},    # Japan: JPPFS + IFRS adopters
     "tw_mops": {**_TIFRS_MAP, **_IFRS_MAP},      # Taiwan: TIFRS + IFRS
     "br_cvm": _CVM_ACCOUNT_MAP,
     "cl_cmf": {**_CMF_MAP, **_IFRS_MAP},          # Chile: FECU (IFRS) + IFRS
@@ -515,7 +515,7 @@ def _normalize_japanese_era_date(date_str: str) -> str:
 # Market-specific date normalizers
 _DATE_NORMALIZERS: dict[str, Any] = {
     "tw_mops": _normalize_roc_date,
-    "jp_edinet": _normalize_japanese_era_date,
+    "jp_jquants": _normalize_japanese_era_date,
 }
 
 
@@ -594,7 +594,7 @@ _MARKET_CURRENCIES: dict[str, str] = {
     "eu_esef": "EUR",
     "fr_esef": "EUR",
     "de_esef": "EUR",
-    "jp_edinet": "JPY",
+    "jp_jquants": "JPY",
     "kr_dart": "KRW",
     "tw_mops": "TWD",
     "br_cvm": "BRL",

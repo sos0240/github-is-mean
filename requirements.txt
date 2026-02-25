@@ -44,7 +44,7 @@ matplotlib>=3.6
 # Phase 1: Unofficial wrappers for core markets
 edgartools>=5.15            # US SEC EDGAR (primary) -- v5.15+ required: cash_flow()->cashflow_statement() rename
 sec-edgar-api>=1.0         # US SEC EDGAR (fallback)
-edinet-tools>=0.3          # Japan EDINET (primary) -- v0.3+ required: API changed (entity/search/documents)
+jquants-api-client>=2.0.0  # Japan J-Quants (primary) -- replaces edinet-tools. Free plan via email registration at jpx-jquants.com
 dart-fss>=0.4              # South Korea DART (primary)
 # pyesef -- REMOVED: library archived 2026-01-03 (graceful degradation in eu_esef_wrapper.py)
 # pycvm -- optional: file-based API, br_cvm_wrapper.py uses direct HTTP as primary path
@@ -53,16 +53,21 @@ pycvm>=0.4                 # Brazil CVM data (optional, used for local file pars
 # Phase 2: Tier 2 market wrappers (optional -- graceful degradation if not installed)
 # akshare>=1.18             # China SSE/SZSE (comprehensive: stocks, financials, macro) -- research: .roo/research/cn-sse-2026-02-24.md
 # jugaad-data>=0.29         # India NSE/BSE (stock data, RBI rates) -- research: .roo/research/in-bse-2026-02-24.md
-# ixbrl-parse>=0.10         # UK Companies House iXBRL financial extraction -- research: .roo/research/unofficial-wrapper-discovery-2026-02-24.md
+ixbrl-parse>=0.10          # UK Companies House iXBRL financial extraction -- research: .roo/research/uk-ixbrl-parse-2026-02-25.md
 
-# Phase 2b: Privacy & NER (optional -- local PII detection without network calls)
-# spacy>=3.5               # Local NER for personal data detection (12MB model: en_core_web_sm)
-# After installing: python -m spacy download en_core_web_sm
+# Phase 2b: OHLCV per-region wrappers (primary sources, graceful fallback to yfinance)
+yfinance>=1.2.0            # Global OHLCV fallback (no key) -- research: .roo/research/ohlcv-yfinance-2026-02-24.md
+pykrx>=1.2.4               # Korea OHLCV primary (no key) -- research: .roo/research/ohlcv-per-region-2026-02-25.md
+twstock>=1.4.0             # Taiwan OHLCV primary (no key) -- research: .roo/research/ohlcv-per-region-2026-02-25.md
+# akshare>=1.18             # China OHLCV primary (no key, heavy deps) -- optional, uncomment if needed
+jugaad-data>=0.29          # India OHLCV primary (no key) -- research: .roo/research/ohlcv-per-region-2026-02-25.md
 
-# Phase 3: Macro data libraries (removed -- government macro APIs deleted)
-# fredapi>=0.5             # US FRED (removed)
-# wbgapi>=1.0              # World Bank (removed)
-# sdmx1>=2.0               # SDMX: ECB, OECD, Eurostat, INSEE (removed)
+# Phase 3: Macro data libraries (per-region primary + wbgapi fallback)
+wbgapi>=1.0.13             # Global macro fallback (no key) -- research: .roo/research/macro-wbgapi-2026-02-24.md
+fredapi>=0.5.2             # US FRED macro primary (needs FRED_API_KEY) -- research: .roo/research/macro-per-region-2026-02-25.md
+sdmx1>=2.25                # EU/ECB/Bundesbank macro primary (no key) -- research: .roo/research/macro-per-region-2026-02-25.md
+python-bcb>=0.3.3          # Brazil BCB macro primary (no key) -- research: .roo/research/macro-per-region-2026-02-25.md
+banxicoapi>=1.0.2          # Mexico Banxico macro primary (needs BANXICO_TOKEN) -- research: .roo/research/macro-per-region-2026-02-25.md
 
 # Testing
 pytest>=7.0

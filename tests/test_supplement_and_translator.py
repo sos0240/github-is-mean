@@ -73,7 +73,7 @@ class TestCanonicalTranslator:
             "report_date": ["2024-03-31", "2024-03-31", "2024-03-31"],
         })
 
-        result = translate_financials(df, "jp_edinet")
+        result = translate_financials(df, "jp_jquants")
         canonical_names = result["canonical_name"].tolist()
         assert "revenue" in canonical_names
         assert "total_assets" in canonical_names
@@ -229,7 +229,7 @@ class TestCanonicalTranslator:
             "ticker": "TEST",
             "country": "JP",
         }
-        result = translate_profile(raw, "jp_edinet")
+        result = translate_profile(raw, "jp_jquants")
         assert result["name"] == "Test Corp"
         assert result["ticker"] == "TEST"
         assert result["currency"] == "JPY"
@@ -303,7 +303,7 @@ class TestCanonicalTranslator:
         """get_concept_map should return a dict for known markets."""
         from operator1.clients.canonical_translator import get_concept_map
 
-        for market in ["us_sec_edgar", "eu_esef", "jp_edinet", "tw_mops", "br_cvm", "cl_cmf"]:
+        for market in ["us_sec_edgar", "eu_esef", "jp_jquants", "tw_mops", "br_cvm", "cl_cmf"]:
             cmap = get_concept_map(market)
             assert isinstance(cmap, dict)
             assert len(cmap) > 0
@@ -390,18 +390,18 @@ class TestSupplement:
         from operator1.clients.supplement import enrich_profile
         from operator1.clients import supplement as sup_mod
 
-        original = sup_mod._MARKET_ENRICHERS.get("jp_edinet")
-        sup_mod._MARKET_ENRICHERS["jp_edinet"] = lambda t, **kw: (_ for _ in ()).throw(
+        original = sup_mod._MARKET_ENRICHERS.get("jp_jquants")
+        sup_mod._MARKET_ENRICHERS["jp_jquants"] = lambda t, **kw: (_ for _ in ()).throw(
             RuntimeError("API down")
         )
 
         try:
             profile = {"name": "Toyota", "ticker": "7203"}
-            result = enrich_profile("jp_edinet", "7203", existing_profile=profile)
+            result = enrich_profile("jp_jquants", "7203", existing_profile=profile)
             assert result["name"] == "Toyota"
         finally:
             if original is not None:
-                sup_mod._MARKET_ENRICHERS["jp_edinet"] = original
+                sup_mod._MARKET_ENRICHERS["jp_jquants"] = original
 
     def test_enrich_profile_empty_ticker(self):
         """Empty ticker should return profile unchanged."""
@@ -428,7 +428,7 @@ class TestSupplement:
         """All partial-coverage markets should have enrichers registered."""
         from operator1.clients.supplement import _MARKET_ENRICHERS
 
-        partial_markets = ["eu_esef", "fr_esef", "de_esef", "jp_edinet",
+        partial_markets = ["eu_esef", "fr_esef", "de_esef", "jp_jquants",
                           "tw_mops", "br_cvm", "cl_cmf"]
         for market_id in partial_markets:
             assert market_id in _MARKET_ENRICHERS, (
@@ -484,7 +484,7 @@ class TestTranslatorIntegration:
             "report_date": ["2024-03-31", "2024-03-31", "2024-03-31"],
         })
 
-        result = translate_financials(df, "jp_edinet", "income")
+        result = translate_financials(df, "jp_jquants", "income")
         canonical_names = set(result["canonical_name"].tolist())
         assert "revenue" in canonical_names
         assert "operating_income" in canonical_names
@@ -623,7 +623,7 @@ class TestTranslatorIntegration:
         all_markets = [
             "us_sec_edgar", "uk_companies_house",
             "eu_esef", "fr_esef", "de_esef",
-            "jp_edinet", "kr_dart", "tw_mops",
+            "jp_jquants", "kr_dart", "tw_mops",
             "br_cvm", "cl_cmf",
         ]
         for market_id in all_markets:
@@ -641,7 +641,7 @@ class TestTranslatorIntegration:
             "eu_esef": "EUR",
             "fr_esef": "EUR",
             "de_esef": "EUR",
-            "jp_edinet": "JPY",
+            "jp_jquants": "JPY",
             "kr_dart": "KRW",
             "tw_mops": "TWD",
             "br_cvm": "BRL",

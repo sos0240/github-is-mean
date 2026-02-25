@@ -120,10 +120,15 @@ def create_pit_client(
             market_id=market_id,
         )
 
-    if market_id == "jp_edinet":
-        from operator1.clients.jp_edinet_wrapper import JPEdinetClient
-        subscription_key = secrets.get("EDINET_API_KEY", "")
-        return JPEdinetClient(subscription_key=subscription_key)
+    if market_id == "jp_jquants":
+        from operator1.clients.jp_jquants_wrapper import JPJquantsClient
+        api_key = secrets.get("JQUANTS_API_KEY", "")
+        if not api_key:
+            logger.warning(
+                "JQUANTS_API_KEY not set. J-Quants requests will fail. "
+                "Register free at https://jpx-jquants.com/login"
+            )
+        return JPJquantsClient(api_key=api_key)
 
     if market_id == "kr_dart":
         api_key = secrets.get("DART_API_KEY", "")

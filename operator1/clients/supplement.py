@@ -473,7 +473,7 @@ _MARKET_ENRICHERS = {
     "eu_esef": lambda t, **kw: euronext_enrich(ticker=t, name=kw.get("name", "")),
     "fr_esef": lambda t, **kw: euronext_enrich(ticker=t, name=kw.get("name", "")),
     "de_esef": lambda t, **kw: euronext_enrich(ticker=t, name=kw.get("name", "")),
-    "jp_edinet": lambda t, **kw: jpx_enrich(ticker=t),
+    "jp_jquants": lambda t, **kw: jpx_enrich(ticker=t),
     "tw_mops": lambda t, **kw: twse_enrich(ticker=t),
     "br_cvm": lambda t, **kw: b3_enrich(
         ticker=t, cnpj=kw.get("cnpj", ""), name=kw.get("name", ""),
@@ -498,7 +498,7 @@ def enrich_profile(
     Parameters
     ----------
     market_id:
-        PIT market identifier (e.g. "eu_esef", "jp_edinet").
+        PIT market identifier (e.g. "eu_esef", "jp_jquants").
     ticker:
         Company ticker or identifier.
     existing_profile:

@@ -24,7 +24,12 @@ from operator1.http_utils import cached_get, HTTPError
 
 logger = logging.getLogger(__name__)
 
+# CMF Chile restructured their website in 2025/2026.
+# Old paths (/portal/informacion/entidades/busqueda, /portal/estadisticas/fecu)
+# now return 404. The new structure uses CMS-style numeric URLs.
+# We try the new Open Data API first, then fall back to the old paths.
 _CMF_BASE = "https://www.cmfchile.cl"
+_CMF_OPENDATA = "https://www.cmfchile.cl/opendata"
 _CACHE_DIR = Path("cache/cl_cmf")
 
 
@@ -75,15 +80,29 @@ class CLCmfClient:
         return "Chile (Santiago Stock Exchange) -- CMF"
 
     def list_companies(self, query: str = "") -> list[dict[str, Any]]:
+        items = []
+        # Try Open Data API first (new CMF structure)
         try:
             data = cached_get(
-                f"{_CMF_BASE}/portal/informacion/entidades/busqueda",
+                f"{_CMF_OPENDATA}/emisores",
                 params={"tipo": "SA", "formato": "json"},
                 headers=self._headers,
             )
             items = data if isinstance(data, list) else data.get("data", []) if isinstance(data, dict) else []
         except Exception:
-            items = []
+            pass
+
+        # Fallback to old path (may still work in some cases)
+        if not items:
+            try:
+                data = cached_get(
+                    f"{_CMF_BASE}/portal/informacion/entidades/busqueda",
+                    params={"tipo": "SA", "formato": "json"},
+                    headers=self._headers,
+                )
+                items = data if isinstance(data, list) else data.get("data", []) if isinstance(data, dict) else []
+            except Exception:
+                logger.debug("CMF Chile: both new and old company endpoints failed")
 
         companies = []
         for item in items:
@@ -153,16 +172,25 @@ class CLCmfClient:
         for year in range(current_year - 2, current_year + 1):
             for period in ["Q4", "Q2"]:  # Annual and semi-annual
                 try:
-                    data = cached_get(
-                        f"{_CMF_BASE}/portal/estadisticas/fecu",
-                        params={
-                            "rut": identifier,
-                            "ano": str(year),
-                            "periodo": period,
-                            "formato": "json",
-                        },
-                        headers=self._headers,
-                    )
+                    # Try Open Data API first, then old path
+                    fecu_data = None
+                    for base_url in [f"{_CMF_OPENDATA}/fecu", f"{_CMF_BASE}/portal/estadisticas/fecu"]:
+                        try:
+                            fecu_data = cached_get(
+                                base_url,
+                                params={
+                                    "rut": identifier,
+                                    "ano": str(year),
+                                    "periodo": period,
+                                    "formato": "json",
+                                },
+                                headers=self._headers,
+                            )
+                            if fecu_data:
+                                break
+                        except Exception:
+                            continue
+                    data = fecu_data
 
                     items = data if isinstance(data, list) else data.get("data", []) if isinstance(data, dict) else []
                     from operator1.clients.canonical_translator import _CMF_MAP

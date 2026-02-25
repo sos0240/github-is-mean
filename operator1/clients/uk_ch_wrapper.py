@@ -224,8 +224,8 @@ class UKCompaniesHouseClient:
         Uses ixbrl-parse library (if installed) for structured extraction,
         with regex fallback for common UK-GAAP tags.
 
-        Research: .roo/research/unofficial-wrapper-discovery-2026-02-24.md
-        Library: ixbrl-parse v0.10.1 (MIT license)
+        Research: .roo/research/uk-ixbrl-parse-2026-02-25.md
+        Library: ixbrl-parse v0.10.1 (MIT license, no API key needed)
         """
         values: dict[str, float] = {}
 
@@ -248,26 +248,32 @@ class UKCompaniesHouseClient:
             logger.debug("iXBRL download failed for %s/%s: %s", identifier, transaction_id, exc)
             return values
 
-        # Try ixbrl-parse library first
+        # Try ixbrl-parse library first (verified API from research log)
+        # Docs: https://github.com/cybermaggedon/ixbrl-parse/blob/master/README.md
         try:
-            from ixbrlparse import IXBRL
+            from lxml import etree as ET
+            from ixbrl_parse.ixbrl import parse as ixbrl_parse
             import io
 
-            ixbrl_doc = IXBRL(io.StringIO(html_content))
-            from operator1.clients.canonical_translator import _UKGAAP_MAP, _IFRS_MAP
+            tree = ET.parse(io.StringIO(html_content))
+            ixbrl = ixbrl_parse(tree)
 
+            from operator1.clients.canonical_translator import _UKGAAP_MAP, _IFRS_MAP
             combined_map = {**_UKGAAP_MAP, **_IFRS_MAP}
 
-            for item in ixbrl_doc.numeric:
-                concept = item.get("name", "") if isinstance(item, dict) else getattr(item, "name", "")
-                value = item.get("value", None) if isinstance(item, dict) else getattr(item, "value", None)
+            # Access parsed values via ixbrl.values dict
+            for val_id, val_obj in ixbrl.values.items():
+                concept = getattr(val_obj, "name", "")
+                raw_value = val_obj.to_value() if hasattr(val_obj, "to_value") else None
 
-                if concept and value is not None:
+                if concept and raw_value is not None:
                     # Try full concept name and bare name
-                    canonical = combined_map.get(concept) or combined_map.get(concept.split(":")[-1] if ":" in concept else concept)
+                    canonical = combined_map.get(concept) or combined_map.get(
+                        concept.split(":")[-1] if ":" in concept else concept
+                    )
                     if canonical:
                         try:
-                            values[canonical] = float(value)
+                            values[canonical] = float(raw_value)
                         except (ValueError, TypeError):
                             continue
 
