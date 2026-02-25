@@ -628,9 +628,16 @@ Non-interactive examples:
     # a given date is an immutable fact that never changes retroactively.
     if quotes_df.empty and ticker:
         logger.info(
-            "PIT source %s does not provide OHLCV -- price features will be limited.",
+            "PIT source %s does not provide OHLCV -- fetching from OHLCV provider.",
             market_info.pit_api_name,
         )
+        try:
+            from operator1.clients.ohlcv_provider import fetch_ohlcv
+            quotes_df = fetch_ohlcv(ticker, market_id=args.market)
+            if not quotes_df.empty:
+                logger.info("OHLCV fetched from provider: %d rows", len(quotes_df))
+        except Exception as exc:
+            logger.warning("OHLCV provider failed: %s", exc)
 
     # Step 3b: Reconcile financial data (normalize fields, validate dates)
     reconciliation_report = {}
@@ -660,6 +667,12 @@ Non-interactive examples:
         for label, stmt_df in [("income", income_df), ("balance", balance_df), ("cashflow", cashflow_df)]:
             if stmt_df.empty:
                 continue
+            logger.debug(
+                "Pivot check for %s: columns=%s, has_canonical=%s, has_value=%s",
+                label, list(stmt_df.columns)[:5],
+                "canonical_name" in stmt_df.columns,
+                "value" in stmt_df.columns,
+            )
             if "canonical_name" in stmt_df.columns and "value" in stmt_df.columns:
                 wide = pivot_to_canonical_wide(stmt_df, date_col="report_date")
                 if not wide.empty:
@@ -767,15 +780,28 @@ Non-interactive examples:
     # ------------------------------------------------------------------
     # Step 4a: Fetch macro data for survival mode analysis
     # ------------------------------------------------------------------
-    macro_data = {}          # raw dict[str, pd.Series] (macro APIs removed)
-    macro_dataset = None     # MacroDataset for downstream modules
+    macro_data = {}
+    macro_dataset = None
     macro_quadrant_result = None
 
     if macro_api_info:
         logger.info("")
-        logger.info(
-            "Step 4a: Macro data fetching skipped (government macro APIs removed).",
-        )
+        logger.info("Step 4a: Fetching macro data from %s...", macro_api_info.api_name)
+        try:
+            from operator1.clients.macro_provider import fetch_macro
+            macro_data = fetch_macro(
+                market_info.country_code,
+                secrets=secrets,
+                years=int(getattr(args, "years", 2)),
+            )
+            if macro_data:
+                logger.info("Macro data: %d indicators fetched", len(macro_data))
+                for name, series in macro_data.items():
+                    logger.info("    [OK] %s: %d observations", name, len(series))
+            else:
+                logger.warning("Macro data: no indicators returned (APIs may need keys)")
+        except Exception as exc:
+            logger.warning("Macro data fetch failed (continuing without macro): %s", exc)
 
     # ------------------------------------------------------------------
     # Step 4a-validate: Log what both APIs returned for diagnostics
