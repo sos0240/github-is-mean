@@ -26,8 +26,11 @@ _PRIMARY_FETCHERS: dict[str, str] = {
     "IT": "ecb",    # Italy -- eurozone, use ECB
     "BR": "bcb",
     "MX": "banxico",
-    # UK (ONS), JP (e-Stat), KR (KOSIS), TW (DGBAS), CL (BCCh)
-    # -- not yet implemented, fall through to wbgapi global fallback
+    "GB": "ons",       # UK -- ONS (no key needed)
+    "JP": "estat",     # Japan -- FRED (JP series) / e-Stat
+    "KR": "kosis",     # Korea -- FRED (KR series) / KOSIS
+    "TW": "dgbas",     # Taiwan -- FRED (TW series) / DGBAS
+    "CL": "bcch",      # Chile -- FRED (CL series) / BCCh
 }
 
 
@@ -96,6 +99,41 @@ def fetch_macro(
             )
         except Exception as exc:
             logger.debug("Banxico primary failed: %s", exc)
+
+    elif primary == "ons":
+        try:
+            from operator1.clients.macro_ons import fetch_macro_ons
+            results = fetch_macro_ons(years=years)
+        except Exception as exc:
+            logger.debug("ONS primary failed: %s", exc)
+
+    elif primary == "estat":
+        try:
+            from operator1.clients.macro_estat import fetch_macro_estat
+            results = fetch_macro_estat(years=years)
+        except Exception as exc:
+            logger.debug("e-Stat primary failed: %s", exc)
+
+    elif primary == "kosis":
+        try:
+            from operator1.clients.macro_kosis import fetch_macro_kosis
+            results = fetch_macro_kosis(years=years)
+        except Exception as exc:
+            logger.debug("KOSIS primary failed: %s", exc)
+
+    elif primary == "dgbas":
+        try:
+            from operator1.clients.macro_dgbas import fetch_macro_dgbas
+            results = fetch_macro_dgbas(years=years)
+        except Exception as exc:
+            logger.debug("DGBAS primary failed: %s", exc)
+
+    elif primary == "bcch":
+        try:
+            from operator1.clients.macro_bcch import fetch_macro_bcch
+            results = fetch_macro_bcch(years=years)
+        except Exception as exc:
+            logger.debug("BCCh primary failed: %s", exc)
 
     # Fallback to wbgapi if primary returned nothing or insufficient data
     if len(results) < 3:  # Need at least GDP, inflation, unemployment
