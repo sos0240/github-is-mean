@@ -205,7 +205,7 @@ def _capital_misallocation(df: pd.DataFrame) -> pd.Series:
                        pd.Series(np.nan, index=df.index))
     solv_score = df.get("fh_solvency_score",
                         pd.Series(np.nan, index=df.index))
-    dividends = df.get("dividends_paid_asof",
+    dividends = df.get("dividends_paid",
                        pd.Series(np.nan, index=df.index))
     nd_ebitda = df.get("net_debt_to_ebitda",
                        pd.Series(np.nan, index=df.index))

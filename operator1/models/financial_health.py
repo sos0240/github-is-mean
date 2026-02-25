@@ -419,7 +419,7 @@ def compute_altman_z_score(df: pd.DataFrame) -> AltmanZResult:
     retained_earnings = df.get("retained_earnings", pd.Series(np.nan, index=df.index))
     x2 = retained_earnings / ta
 
-    ebit = df.get("ebit", df.get("ebitda", pd.Series(np.nan, index=df.index)))
+    ebit = df.get("ebit", df.get("operating_income", df.get("ebitda", pd.Series(np.nan, index=df.index))))
     x3 = ebit / ta
 
     market_cap = df.get("market_cap", pd.Series(np.nan, index=df.index))
