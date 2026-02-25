@@ -261,13 +261,23 @@ def extract_all_data(
         market_id = getattr(pit_client, "market_id", "")
         ticker = result.target.profile.get("ticker", target.isin)
         logger.info(
-            "PIT source has no OHLCV for %s; trying supplement provider ...",
+            "PIT source has no OHLCV for %s; trying per-region OHLCV provider ...",
             target.isin,
         )
-        logger.info(
-            "No OHLCV supplement available for %s (Alpha Vantage removed).",
-            target.isin,
-        )
+        try:
+            from operator1.clients.ohlcv_provider import fetch_ohlcv
+            result.target.ohlcv = fetch_ohlcv(
+                ticker=ticker,
+                market_id=market_id,
+                years=5,
+            )
+            if not result.target.ohlcv.empty:
+                logger.info(
+                    "OHLCV provider fetched %d rows for %s",
+                    len(result.target.ohlcv), ticker,
+                )
+        except Exception as exc:
+            logger.warning("OHLCV provider failed for %s: %s", ticker, exc)
 
     if result.target.ohlcv.empty:
         result.errors.append({

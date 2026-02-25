@@ -150,13 +150,36 @@ def fetch_macro_data(
     # Fetch indicators if not pre-fetched
     # ------------------------------------------------------------------
     if macro_raw is None:
-        logger.info(
-            "Macro data fetching skipped (government macro APIs removed)."
-        )
-        return MacroDataset(
-            country_iso3=country_iso2,
-            missing=list(_MACRO_TO_CANONICAL.values()),
-        )
+        # Try per-region macro provider (primary + wbgapi fallback)
+        try:
+            from operator1.clients.macro_provider import fetch_macro
+            raw_data = fetch_macro(
+                country_iso2=country_iso2,
+                market_id=market_id,
+                secrets=secrets,
+                years=10,
+            )
+            if raw_data:
+                macro_raw = raw_data
+                logger.info(
+                    "Macro provider fetched %d indicators for %s",
+                    len(raw_data), country_iso2,
+                )
+            else:
+                logger.info(
+                    "Macro provider returned empty for %s -- returning empty MacroDataset",
+                    country_iso2,
+                )
+                return MacroDataset(
+                    country_iso3=country_iso2,
+                    missing=list(_MACRO_TO_CANONICAL.values()),
+                )
+        except Exception as exc:
+            logger.warning("Macro provider failed for %s: %s", country_iso2, exc)
+            return MacroDataset(
+                country_iso3=country_iso2,
+                missing=list(_MACRO_TO_CANONICAL.values()),
+            )
 
     # ------------------------------------------------------------------
     # Convert raw series -> yearly DataFrames for downstream consumers
