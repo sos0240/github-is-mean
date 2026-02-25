@@ -241,7 +241,7 @@ _CMF_MAP: dict[str, str] = {
 
 # UK GAAP concepts (Companies House iXBRL)
 _UKGAAP_MAP: dict[str, str] = {
-    # Income statement
+    # Income statement -- UK GAAP
     "uk-gaap:Turnover": "revenue",
     "uk-gaap:TurnoverRevenue": "revenue",
     "uk-gaap:GrossProfitLoss": "gross_profit",
@@ -250,7 +250,24 @@ _UKGAAP_MAP: dict[str, str] = {
     "uk-gaap:ProfitLossForPeriod": "net_income",
     "uk-gaap:TaxOnProfitOnOrdinaryActivities": "taxes",
     "uk-gaap:InterestPayableAndSimilarCharges": "interest_expense",
-    # Balance sheet
+    # Income statement -- FRS 102 (iXBRL tags from Companies House filings)
+    "frs102:TurnoverRevenue": "revenue",
+    "frs102:Turnover": "revenue",
+    "frs102:GrossProfit": "gross_profit",
+    "frs102:GrossProfitLoss": "gross_profit",
+    "frs102:OperatingProfit": "operating_income",
+    "frs102:OperatingProfitLoss": "operating_income",
+    "frs102:ProfitLossBeforeTax": "ebit",
+    "frs102:ProfitLossForPeriod": "net_income",
+    "frs102:TaxOnProfit": "taxes",
+    "frs102:InterestPayable": "interest_expense",
+    # Income statement -- bare names (no namespace prefix)
+    "Turnover": "revenue",
+    "TurnoverRevenue": "revenue",
+    "OperatingProfit": "operating_income",
+    "ProfitLossBeforeTax": "ebit",
+    "ProfitLossForPeriod": "net_income",
+    # Balance sheet -- UK GAAP
     "uk-gaap:FixedAssets": "total_assets",
     "uk-gaap:TotalAssetsLessCurrentLiabilities": "total_assets",
     "uk-gaap:Creditors": "total_liabilities",
@@ -259,10 +276,29 @@ _UKGAAP_MAP: dict[str, str] = {
     "uk-gaap:CreditorsDueWithinOneYear": "current_liabilities",
     "uk-gaap:CashBankInHand": "cash_and_equivalents",
     "uk-gaap:CreditorsDueAfterOneYear": "long_term_debt",
-    # Cash flow
+    # Balance sheet -- FRS 102
+    "frs102:FixedAssets": "total_assets",
+    "frs102:TotalAssetsLessCurrentLiabilities": "total_assets",
+    "frs102:NetCurrentAssetsLiabilities": "current_assets",
+    "frs102:CalledUpShareCapital": "total_equity",
+    "frs102:ShareholderFunds": "total_equity",
+    "frs102:Creditors": "total_liabilities",
+    "frs102:CreditorsDueWithinOneYear": "current_liabilities",
+    "frs102:CreditorsDueAfterOneYear": "long_term_debt",
+    "frs102:CashBankInHand": "cash_and_equivalents",
+    "frs102:CashAtBankAndInHand": "cash_and_equivalents",
+    # Balance sheet -- bare names
+    "FixedAssets": "total_assets",
+    "ShareholderFunds": "total_equity",
+    "CalledUpShareCapital": "total_equity",
+    # Cash flow -- UK GAAP
     "uk-gaap:NetCashInflowOutflowFromOperatingActivities": "operating_cash_flow",
     "uk-gaap:NetCashInflowOutflowFromInvestingActivities": "investing_cf",
     "uk-gaap:NetCashInflowOutflowFromFinancingActivities": "financing_cf",
+    # Cash flow -- FRS 102
+    "frs102:NetCashFromOperatingActivities": "operating_cash_flow",
+    "frs102:NetCashUsedInInvestingActivities": "investing_cf",
+    "frs102:NetCashUsedInFinancingActivities": "financing_cf",
 }
 
 # South Korea DART / K-IFRS concepts (Korean account names from DART API)
