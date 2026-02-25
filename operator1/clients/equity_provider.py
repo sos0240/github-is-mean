@@ -59,6 +59,63 @@ class EquityProvider(Protocol):
 MARKET_CHOICES = tuple(MARKETS.keys())
 
 
+class _JPJquantsAdapter:
+    """Adapter that maps PITClient protocol to JPJquantsClient's API.
+
+    JPJquantsClient exposes all financials via ``get_financials()`` as a
+    dict of DataFrames.  This adapter exposes them as individual methods
+    (``get_income_statement()``, ``get_balance_sheet()``, etc.) so that
+    ``data_extraction.py`` can consume them through the standard PITClient
+    interface without changing the J-Quants wrapper.
+    """
+
+    def __init__(self, client) -> None:
+        self._client = client
+        self._financials_cache: dict = {}
+
+    @property
+    def market_id(self) -> str:
+        return "jp_jquants"
+
+    @property
+    def market_name(self) -> str:
+        return "Japan (J-Quants / TSE)"
+
+    def list_companies(self, query: str = "") -> list:
+        return self._client.list_companies(query)
+
+    def search_company(self, name: str) -> list:
+        return self._client.list_companies(query=name)
+
+    def get_profile(self, identifier: str) -> dict:
+        return self._client.get_profile(identifier)
+
+    def get_peers(self, identifier: str) -> list:
+        return self._client.get_peers(identifier)
+
+    def get_executives(self, identifier: str) -> list:
+        return self._client.get_executives(identifier)
+
+    def _get_financials(self, identifier: str) -> dict:
+        if identifier not in self._financials_cache:
+            self._financials_cache[identifier] = self._client.get_financials(identifier)
+        return self._financials_cache[identifier]
+
+    def get_income_statement(self, identifier: str) -> pd.DataFrame:
+        return self._get_financials(identifier).get("income", pd.DataFrame())
+
+    def get_balance_sheet(self, identifier: str) -> pd.DataFrame:
+        return self._get_financials(identifier).get("balance", pd.DataFrame())
+
+    def get_cashflow_statement(self, identifier: str) -> pd.DataFrame:
+        return self._get_financials(identifier).get("cashflow", pd.DataFrame())
+
+    def get_quotes(self, identifier: str) -> pd.DataFrame:
+        # J-Quants doesn't provide OHLCV through the financial summary API.
+        # The OHLCV provider (yfinance with .T suffix) handles this.
+        return pd.DataFrame()
+
+
 def create_pit_client(
     market_id: str,
     secrets: dict[str, str] | None = None,
@@ -128,7 +185,8 @@ def create_pit_client(
                 "JQUANTS_API_KEY not set. J-Quants requests will fail. "
                 "Register free at https://jpx-jquants.com/login"
             )
-        return JPJquantsClient(api_key=api_key)
+        raw_client = JPJquantsClient(api_key=api_key)
+        return _JPJquantsAdapter(raw_client)
 
     if market_id == "kr_dart":
         api_key = secrets.get("DART_API_KEY", "")

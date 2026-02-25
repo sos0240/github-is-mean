@@ -21,10 +21,13 @@ _PRIMARY_FETCHERS: dict[str, str] = {
     "EU": "ecb",
     "DE": "ecb",
     "FR": "ecb",
+    "NL": "ecb",    # Netherlands -- eurozone, use ECB
+    "ES": "ecb",    # Spain -- eurozone, use ECB
+    "IT": "ecb",    # Italy -- eurozone, use ECB
     "BR": "bcb",
     "MX": "banxico",
-    # UK (ONS), JP (e-Stat), KR (KOSIS), CL (BCC) -- use wbgapi for now
-    # These need API keys and direct HTTP implementation
+    # UK (ONS), JP (e-Stat), KR (KOSIS), TW (DGBAS), CL (BCCh)
+    # -- not yet implemented, fall through to wbgapi global fallback
 }
 
 

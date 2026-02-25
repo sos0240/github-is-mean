@@ -39,6 +39,10 @@ _MARKET_SUFFIX: dict[str, str] = {
     "ch_six": ".SW",
     "sa_tadawul": ".SR",
     "ae_dfm": ".AE",
+    "nl_esef": ".AS",   # Euronext Amsterdam
+    "es_esef": ".MC",   # BME Madrid
+    "it_esef": ".MI",   # Borsa Italiana Milan
+    "se_esef": ".ST",   # Nasdaq Stockholm
 }
 
 
